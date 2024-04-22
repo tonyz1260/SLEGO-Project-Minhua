@@ -1,0 +1,17 @@
+panel
+openml
+ucimlrepo
+joblib==1.3.2
+openai==1.19.0
+PyPDF2
+pdfkit
+autogluon
+arxiv
+python-docx
+openpyxl
+pytesseract
+Pillow
+sweetviz
+autoviz
+vectorbt
+quantstats
