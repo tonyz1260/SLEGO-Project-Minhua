@@ -38,7 +38,7 @@ def autoviz_plot(input_file_path: str = 'dataspace/AirQuality.csv',
                  lowess: bool = False,
                  header: int = 0,
                  verbose: int = 2,
-                 sep: str = ','):
+                 sep: str = ''):
     """
     Generates visualizations for the dataset using AutoViz.
 
