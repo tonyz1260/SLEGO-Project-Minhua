@@ -14,4 +14,3 @@ sweetviz
 vectorbt
 quantstats
 autokeras
-pycaret
