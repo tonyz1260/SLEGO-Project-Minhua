@@ -1,7 +1,7 @@
 import sweetviz as sv
 import pandas as pd
 
-from autoviz import AutoViz_Class
+#from autoviz import AutoViz_Class
 from typing import Union
 
 
@@ -30,46 +30,46 @@ def generate_sweetviz_report(input_csv: str='dataspace/dataset.csv',
 
 
 
-def autoviz_plot(input_file_path: str = 'dataspace/AirQuality.csv', 
-                 target_variable: Union[str, None] = 'CO(GT)', 
-                 custom_plot_dir: str = 'dataspace',
-                 max_rows_analyzed: int = 150000,
-                 max_cols_analyzed: int = 30,
-                 lowess: bool = False,
-                 header: int = 0,
-                 verbose: int = 2,
-                 sep: str = ''):
-    """
-    Generates visualizations for the dataset using AutoViz.
+# def autoviz_plot(input_file_path: str = 'dataspace/AirQuality.csv', 
+#                  target_variable: Union[str, None] = 'CO(GT)', 
+#                  custom_plot_dir: str = 'dataspace',
+#                  max_rows_analyzed: int = 150000,
+#                  max_cols_analyzed: int = 30,
+#                  lowess: bool = False,
+#                  header: int = 0,
+#                  verbose: int = 2,
+#                  sep: str = ''):
+#     """
+#     Generates visualizations for the dataset using AutoViz.
 
-    Parameters:
-    input_file_path (str): Path to the input CSV dataset.
-    target_variable (Union[str, None]): Target variable for analysis. If None, no specific target.
-    custom_plot_dir (str): Directory where plots will be saved.
-    max_rows_analyzed (int): Maximum number of rows to analyze.
-    max_cols_analyzed (int): Maximum number of columns to analyze.
-    lowess (bool): Whether to use locally weighted scatterplot smoothing.
-    header (int): Row number to use as the column names.
-    verbose (int): Verbosity level.
-    sep (str): Separator used in the CSV file.
+#     Parameters:
+#     input_file_path (str): Path to the input CSV dataset.
+#     target_variable (Union[str, None]): Target variable for analysis. If None, no specific target.
+#     custom_plot_dir (str): Directory where plots will be saved.
+#     max_rows_analyzed (int): Maximum number of rows to analyze.
+#     max_cols_analyzed (int): Maximum number of columns to analyze.
+#     lowess (bool): Whether to use locally weighted scatterplot smoothing.
+#     header (int): Row number to use as the column names.
+#     verbose (int): Verbosity level.
+#     sep (str): Separator used in the CSV file.
 
-    Returns:
-    str: Message indicating the completion of the visualization process.
-    """
-    AV = AutoViz_Class()
+#     Returns:
+#     str: Message indicating the completion of the visualization process.
+#     """
+#     AV = AutoViz_Class()
 
-    # Perform the AutoViz analysis and generate the plots
-    dft = AV.AutoViz(
-        filename=input_file_path,
-        sep=sep,
-        depVar=target_variable,
-        dfte=None,
-        header=header,
-        verbose=verbose,
-        lowess=lowess,
-        chart_format="html",
-        max_rows_analyzed=max_rows_analyzed,
-        max_cols_analyzed=max_cols_analyzed,
-        save_plot_dir=custom_plot_dir)
+#     # Perform the AutoViz analysis and generate the plots
+#     dft = AV.AutoViz(
+#         filename=input_file_path,
+#         sep=sep,
+#         depVar=target_variable,
+#         dfte=None,
+#         header=header,
+#         verbose=verbose,
+#         lowess=lowess,
+#         chart_format="html",
+#         max_rows_analyzed=max_rows_analyzed,
+#         max_cols_analyzed=max_cols_analyzed,
+#         save_plot_dir=custom_plot_dir)
 
-    return "Visualizations have been generated and saved!"
+#     return "Visualizations have been generated and saved!"
