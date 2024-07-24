@@ -246,17 +246,18 @@ class SLEGOApp:
     def folder_select_changed(self, event):
         self.file_text.value = '/' + str(self.folder_select.value)
         self.on_filefolder_confirm_btn_click(None)
-def get_doc_string(self, pipeline):
-        text = self.input_text.value
-        output = ''
-        data = json.loads(text)
-        for key in data.keys():
-            output += f'#######{str(key)}#######\n'
-            try:
-                output += getattr(self.func, key).__doc__ + '\n'
-            except AttributeError:
-                output += 'No docstring found for this function\n'
-        return output
+
+    def get_doc_string(self, pipeline):
+            text = self.input_text.value
+            output = ''
+            data = json.loads(text)
+            for key in data.keys():
+                output += f'#######{str(key)}#######\n'
+                try:
+                    output += getattr(self.func, key).__doc__ + '\n'
+                except AttributeError:
+                    output += 'No docstring found for this function\n'
+            return output
 
     @staticmethod
     def is_colab_runtime():
