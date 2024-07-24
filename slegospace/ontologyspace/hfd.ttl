@@ -1,0 +1,59 @@
+# @prefix dbr: <file:///content/rvo/class/> .
+# @prefix rdf1: <file:///content/rvo/link/> .
+# @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# # Node definitions
+# # Relationships between nodes
+# dbr:IntradayMetric rdf1:proxy dbr:Liquidity, dbr:Price .
+# dbr:TickData rdf1:containMeasure dbr:Direction, dbr:TradePrice, dbr:Volume ;
+#              rdf1:dataSource dbr:RefinitivDataScope .
+# dbr:Liquidity rdf1:measuredBy dbr:DollarVolumeTraded, dbr:ShareVolumeTraded .
+# dbr:Price rdf1:measuredBy dbr:AveragePrice, dbr:VWAP .
+# dbr:AveragePrice rdf1:msOutput dbr:calc_avg .
+# dbr:DollarVolumeTraded rdf1:msOutput dbr:calc_doll_vol .
+# dbr:ShareVolumeTraded rdf1:msOutput dbr:calc_share_vol .
+# dbr:VWAP rdf1:msOutput dbr:calc_vwap .
+# dbr:calc_avg rdf1:msInput dbr:TradePrice .
+# dbr:calc_doll_vol rdf1:msInput dbr:Direction, dbr:TradePrice, dbr:Volume .
+# dbr:calc_share_vol rdf1:msInput dbr:Direction, dbr:Volume .
+# dbr:calc_vwap rdf1:msInput dbr:Direction, dbr:TradePrice, dbr:Volume .
+@prefix dbr: <file:///content/rvo/class/> .
+@prefix rdf1: <file:///content/rvo/link/> .
+@prefix rdf: <http:///content/rvo/link/> .
+
+# Node definitions with their implicit classes
+dbr:IntradayMetric a dbr:Measure .
+dbr:Liquidity a dbr:Measure .
+dbr:Price a dbr:Measure .
+dbr:DollarVolumeTraded a dbr:Measure .
+dbr:ShareVolumeTraded a dbr:Measure .
+dbr:AveragePrice a dbr:Measure .
+dbr:VWAP a dbr:Measure .
+
+dbr:Direction a dbr:Variable .
+dbr:TradePrice a dbr:Variable .
+dbr:Volume a dbr:Variable .
+
+dbr:calc_avg a dbr:Microservice .
+dbr:calc_doll_vol a dbr:Microservice .
+dbr:calc_share_vol a dbr:Microservice .
+dbr:calc_vwap a dbr:Microservice .
+
+dbr:TickData a dbr:DataSet .
+
+dbr:RefinitivDataScope a dbr:DataSource .
+
+# Relationships between nodes
+dbr:IntradayMetric rdf1:proxy dbr:Liquidity, dbr:Price .
+dbr:TickData rdf1:containMeasure dbr:Direction, dbr:TradePrice, dbr:Volume ;
+             rdf1:dataSource dbr:RefinitivDataScope .
+dbr:Liquidity rdf1:measuredBy dbr:DollarVolumeTraded, dbr:ShareVolumeTraded .
+dbr:Price rdf1:measuredBy dbr:AveragePrice, dbr:VWAP .
+dbr:AveragePrice rdf1:msOutput dbr:calc_avg .
+dbr:DollarVolumeTraded rdf1:msOutput dbr:calc_doll_vol .
+dbr:ShareVolumeTraded rdf1:msOutput dbr:calc_share_vol .
+dbr:VWAP rdf1:msOutput dbr:calc_vwap .
+dbr:calc_avg rdf1:msInput dbr:TradePrice .
+dbr:calc_doll_vol rdf1:msInput dbr:Direction, dbr:TradePrice, dbr:Volume .
+dbr:calc_share_vol rdf1:msInput dbr:Direction, dbr:Volume .
+dbr:calc_vwap rdf1:msInput dbr:Direction, dbr:TradePrice, dbr:Volume .

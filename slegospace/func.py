@@ -2,7 +2,7 @@ import os
 import ast
 import panel as pn
 import inspect
-
+import json
 def test_function(input_string:str='Hello!', 
           output_file_path:str='dataspace/output.txt'):
     """
@@ -27,7 +27,8 @@ def test_function(input_string:str='Hello!',
 def _compute(module_name, input):
     module = __import__(module_name)
 
-    pipeline_dict = ast.literal_eval(input)
+    #pipeline_dict = ast.literal_eval(input)
+    pipeline_dict = json.loads(text)
     output = ""
     for function_name, parameters in pipeline_dict.items():
         function = eval(f"module.{function_name}")
@@ -94,7 +95,35 @@ def _extract_parameter(func):
     return parameter_dict
 
 
+import os
+import json
 
+def __combine_json_files(directory, output_file):
+    """
+    Combine all JSON files in a directory into a single JSON file.
+
+    Args:
+    directory (str): The directory containing JSON files.
+    output_file (str): The path to the output JSON file.
+    """
+    combined_data = []  # List to hold data from all JSON files
+
+    # Loop over all files in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith('.json'):  # Check for JSON files
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as file:
+                data = json.load(file)  # Load JSON data from file
+                combined_data.append(data)  # Append data to the list
+
+    # Write combined data to output JSON file
+    with open(output_file, 'w') as file:
+        json.dump(combined_data, file, indent=4)  # Use 'indent' for pretty-printing
+
+    print("All JSON files have been combined into:", output_file)
+
+# # Example usage:
+# combine_json_files('/content/drive/MyDrive/SLEGO/slegospace/knowledgespace', '/content/drive/MyDrive/SLEGO/slegospace/knowledgespace/kownledge.json')
 
 from sklearn.model_selection import train_test_split
 import pandas as pd
@@ -102,7 +131,132 @@ from typing import Union
 import joblib
 # Import necessary libraries
 
+def df_keep_rows_by_index(input_csv_file: str = 'dataspace/dataset.csv',
+                       start_index: int = 0,
+                       end_index: int = 100,
+                       output_csv_file: str = 'dataspace/dataset_selected_rows.csv'):
+    """
+    Keeps rows in a pandas DataFrame based on specified index range.
 
+    Parameters:
+    input_csv_file (str): The file path to read the CSV file. Default is 'dataspace/dataset.csv'.
+    start_index (int): The start index of the row range to keep.
+    end_index (int): The end index of the row range to keep. This index is inclusive.
+    output_csv_file (str): The file path to save the modified CSV file. Default is 'dataspace/selected_rows_dataset.csv'.
+
+    Returns:
+    pd.DataFrame: The DataFrame containing only the rows within the specified index range.
+    """
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv_file)
+    
+    # Validate index range
+    if start_index < 0 or end_index >= len(df):
+        raise ValueError("Start or end index is out of the DataFrame's range.")
+    
+    # Keep only the rows within the specified index range
+    df = df.iloc[start_index:end_index + 1]  # +1 because the end index is inclusive
+    
+    # Save the modified DataFrame to a CSV file
+    df.to_csv(output_csv_file, index=False)
+    
+    return df
+
+
+def df_keep_columns(input_csv_file: str = 'dataspace/dataset.csv',
+                          columns_to_keep: list = ['ImportantColumn1', 'ImportantColumn2'],
+                          output_csv_file: str = 'dataspace/dataset_filtered.csv'):
+    """
+    Keeps specified columns in a pandas DataFrame and optionally filters rows based on a condition.
+
+    Parameters:
+    input_csv_file (str): The file path to read the CSV file. Default is 'dataspace/dataset.csv'.
+    columns_to_keep (list): List of column names to be retained in the DataFrame.
+                            Default is ['ImportantColumn1', 'ImportantColumn2'].
+    output_csv_file (str): The file path to save the modified CSV file. Default is 'dataspace/filtered_dataset.csv'.
+
+    Returns:
+    pd.DataFrame: The DataFrame with only the specified columns and optionally filtered rows.
+    """
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv_file)
+    
+    # Check if all specified columns to keep are present in the DataFrame
+    missing_columns = [col for col in columns_to_keep if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Columns not found in DataFrame: {missing_columns}")
+    
+    # Keep only the specified columns
+    df = df[columns_to_keep]
+    
+    # Save the modified DataFrame to a CSV file
+    df.to_csv(output_csv_file, index=False)
+    
+    return df
+
+
+
+def df_delete_columns(input_csv_file: str = 'dataspace/dataset.csv',
+                   columns_to_delete: list = ['UnwantedColumn'],
+                   output_csv_file: str = 'dataspace/dataset_cleaned.csv'):
+    """
+    Deletes specified columns from a pandas DataFrame.
+
+    Parameters:
+    input_csv_file (str): The file path to read the CSV file. Default is 'dataspace/dataset.csv'.
+    columns_to_delete (list): List of column names to be deleted from the DataFrame.
+                              Default is ['UnwantedColumn'].
+    output_csv_file (str): The file path to save the modified CSV file. Default is 'dataspace/cleaned_dataset.csv'.
+
+    Returns:
+    pd.DataFrame: The DataFrame with the specified columns removed.
+    """
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv_file)
+    
+    # Check if all specified columns to delete are present in the DataFrame
+    missing_columns = [col for col in columns_to_delete if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Columns not found in DataFrame: {missing_columns}")
+    
+    # Delete the specified columns
+    df.drop(columns=columns_to_delete, inplace=True)
+    
+    # Save the modified DataFrame to a CSV file
+    df.to_csv(output_csv_file, index=False)
+    
+    return df
+
+def df_rename_columns(input_csv_file: str = 'dataspace/dataset.csv',
+                      rename_dict: dict = {'Close': 'close', 'Open': 'open'},
+                      output_csv_file: str = 'dataspace/dataset_renamed.csv'):
+    """
+    Renames multiple columns in a pandas DataFrame based on a dictionary mapping from old names to new names.
+
+    Parameters:
+    input_csv_file (str): The file path to read the CSV file. Default is 'dataspace/dataset.csv'.
+    rename_dict (dict): Dictionary where keys are old column names and values are new column names.
+                        Default is {'Close': 'close', 'Open': 'open'}.
+    output_csv_file (str): The file path to save the modified CSV file. Default is 'dataspace/modified_dataset.csv'.
+
+    Returns:
+    pd.DataFrame: The DataFrame with renamed columns.
+    """
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv_file)
+    
+    # Check if all keys in the dictionary are present in the DataFrame columns
+    missing_columns = [col for col in rename_dict if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Columns not found in DataFrame: {missing_columns}")
+    
+    # Rename the columns
+    df.rename(columns=rename_dict, inplace=True)
+    
+    # Save the modified DataFrame to a CSV file
+    df.to_csv(output_csv_file, index=False)
+    
+    return df
 
 def merge_csv_by_index(input_csv_file1: str = 'dataspace/dataset1.csv',
                        input_csv_file2: str = 'dataspace/dataset2.csv',
@@ -171,7 +325,7 @@ def prepare_dataset_tabular_ml(input_file_path: str = 'dataspace/AirQuality.csv'
         df = df.drop(columns=drop_columns, errors='ignore')
     
     # Save the cleaned dataset
-    output_file_path = 'dataspace/prepared_dataset_tabular_ml.csv'
+    output_file_path = output_file_path
     df.to_csv(output_file_path)
     
     return df
@@ -230,6 +384,53 @@ def split_dataset_4ml(input_data_file:str = 'dataspace/prepared_dataset_tabular_
     return train_data, val_data, test_data
 
 
+def df_shift_data_row(input_csv_file: str = 'dataspace/dataset.csv',
+                      shift_columns: list = ['Close'],
+                      shift_columns_name: list = ['Close_shifted'],
+                      shift_columns_keep: bool = False,
+                      shift_rows: int = -1,
+                      keep_row: bool = False,
+                      output_csv_file: str = 'dataspace/dataset_selected_rows.csv'):
+    """
+    Shifts the data in specified columns by the specified number of rows and optionally renames and retains original columns.
+
+    Args:
+    input_csv_file (str): Path to the input CSV file.
+    shift_columns (list): List of column names whose data will be shifted.
+    shift_columns_name (list): List of new names for the shifted columns.
+    shift_columns_keep (bool): If True, keeps the original columns alongside the shifted ones.
+    shift_rows (int): Number of rows to shift the data by. 1 is one day delay, -1 is one day ahead
+    keep_row (bool): If False, rows resulting in NaN values from the shift will be dropped.
+    output_csv_file (str): Path to save the output CSV file after shifting the data.
+    
+    Returns:
+    pd.DataFrame: DataFrame with the data shifted and potentially renamed in specified columns.
+    """
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(input_csv_file)
+
+    # Shift the data in the specified columns and optionally rename
+    for orig, new in zip(shift_columns, shift_columns_name):
+        df[new] = df[orig].shift(periods=shift_rows)
+        if not shift_columns_keep:
+            df.drop(orig, axis=1, inplace=True)
+
+    # If keep_row is False, drop rows with NaN values that result from shifting
+    if not keep_row:
+        df = df.dropna(subset=shift_columns_name)
+
+    # Save the modified DataFrame to a new CSV file
+    df.to_csv(output_csv_file, index=False)
+
+    return df
+
+
+
+
+
+
+
+
 
 
 import ast
@@ -254,7 +455,6 @@ Guidelines for building microservices (python functions):
 def import_marketdata_yahoo_csv(ticker: str = 'msft', 
                                 start_date: str = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime("%Y-%m-%d"),
                                 end_date: str = datetime.datetime.now().strftime("%Y-%m-%d"), 
-                                input_file_path: str = '',
                                 output_file_path: str = 'dataspace/dataset.csv' ):
     """
     Imports market data from Yahoo using the yfinance Ticker API.
@@ -308,8 +508,43 @@ def preprocess_filling_missing_values(
 
     return data
 
+def compute_return(input_file_path: str = 'dataspace/dataset.csv',
+                   output_file_path: str = 'dataspace/dataset_return.csv',
+                   window_size: int = 20,
+                   target_column_name: str = 'Close',
+                   return_column_name: str = 'Return',
+                   keep_rows: bool = False):
+    """
+    Compute the daily returns of a stock based on the closing price over a given window size.
+    
+    Args:
+    input_file_path (str): Path to the input CSV file.
+    output_file_path (str): Path to save the output CSV file.
+    window_size (int): The number of days over which to calculate the percentage change.
+    target_column_name (str): The name of the column from which to calculate returns.
+    return_column_name (str): The name of the new column for the calculated returns.
+    keep_rows (bool): If False, rows containing NaN values as a result of the calculation will be removed.
 
-def plot_chart_local(input_file_path: str = 'dataspace/dataset.csv', 
+    Returns:
+    pd.DataFrame: DataFrame with the returns added as a new column.
+    """
+    # Read the data from the input file
+    data = pd.read_csv(input_file_path)
+    
+    # Calculate returns and assign them to the specified new column
+    data[return_column_name] = data[target_column_name].pct_change(periods=window_size)
+    
+    # Handle NaN values based on keep_rows
+    if not keep_rows:
+        data = data.dropna(subset=[return_column_name])
+    
+    # Save the modified DataFrame to a new CSV file
+    data.to_csv(output_file_path, index=False)
+    
+    return data
+        
+
+def plotly_chart(input_file_path: str = 'dataspace/dataset.csv', 
                      index_col: Union[None, int, str] = 0,
                      x_column: str = 'Date', 
                      y_column: str = 'SMA_Close', 
@@ -349,7 +584,7 @@ def plot_chart_local(input_file_path: str = 'dataspace/dataset.csv',
 
     return "Plot saved locally."
 
-def compute_simple_moving_average_local(input_file_path: str = 'dataspace/dataset.csv', 
+def compute_simple_moving_average(input_file_path: str = 'dataspace/dataset.csv', 
                                         column_name: str = 'Close', 
                                         window_size: int = 20, 
                                         output_file_path: str = 'dataspace/dataset.csv'):
@@ -397,6 +632,105 @@ from openpyxl import load_workbook
 from PIL import Image
 import pytesseract
 import csv
+from openai import OpenAI
+
+def chatbot_huggingface_api(API_URL: str = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+                            api_key: str = "your_api_key",
+                            user_input_file: str = '',
+                            output_text_file: str = 'dataspace/gpt_output_text.txt',
+                            output_json_file: str = 'dataspace/gpt_output_full.json',
+                            query: dict = {"inputs": "Can you please let us know more details about your "}):
+    """
+    Sends a query, optionally augmented with contents from various file types, to the specified Hugging Face API endpoint.
+    
+    This function supports processing inputs from text, PDF, DOCX, XLSX, image files (for OCR), JSON, and CSV files. The
+    contents of the file are appended to a base query provided in the `query` parameter. If a file is specified but does
+    not exist, the function will raise a FileNotFoundError. Unsupported file types will raise a ValueError.
+
+    Parameters:
+        API_URL (str): The URL of the Hugging Face API model to which the request will be sent.
+        api_key (str): The API key required for authentication with the Hugging Face API.
+        user_input_file (str): The path to the file whose contents are to be appended to the query. If empty, only the base query is used.
+        output_text_file (str): The path where the plain text part of the response will be saved.
+        output_json_file (str): The path where the full JSON response from the API will be saved.
+        query (dict): A dictionary containing the base query. Expected to have at least a key 'inputs' with a starting string.
+
+    Returns:
+        dict: A dictionary containing the JSON response from the API. If there's an HTTP error, it returns a dictionary
+              containing the error message and status code.
+
+    Raises:
+        FileNotFoundError: If the specified `user_input_file` does not exist.
+        ValueError: If the file extension of `user_input_file` is not supported.
+
+    Example Usage:
+        result = chatbot_huggingface_api(
+            api_key="your_api_key_here",
+            user_input_file="path/to/input.txt",
+            query={"inputs": "Please analyze the following data: "}
+        )
+        print(result)
+    """
+    # Function implementation here
+    # Initialize the combined message with the query's input
+    combined_message = query["inputs"]
+
+    # Process file if specified and exists
+    if user_input_file and os.path.exists(user_input_file):
+        file_extension = user_input_file.split('.')[-1].lower()
+
+        if file_extension == 'txt':
+            with open(user_input_file, 'r') as file:
+                file_contents = file.read().strip()
+            combined_message += f"\n\n==== Text File Input ====\n\n{file_contents}"
+        elif file_extension == 'pdf':
+            with open(user_input_file, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                pdf_contents = ' '.join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
+            combined_message += f"\n\n==== PDF File Input ====\n\n{pdf_contents}"
+        elif file_extension == 'docx':
+            doc = Document(user_input_file)
+            docx_contents = ' '.join([para.text for para in doc.paragraphs])
+            combined_message += f"\n\n==== DOCX File Input ====\n\n{docx_contents}"
+        elif file_extension == 'xlsx':
+            workbook = load_workbook(filename=user_input_file)
+            sheet = workbook.active
+            xlsx_contents = ' '.join([str(cell.value) for row in sheet for cell in row if cell.value is not None])
+            combined_message += f"\n\n==== XLSX File Input ====\n\n{xlsx_contents}"
+        elif file_extension in ['png', 'jpg', 'jpeg']:
+            img = Image.open(user_input_file)
+            image_text = pytesseract.image_to_string(img)
+            combined_message += f"\n\n==== Image File Input (OCR) ====\n\n{image_text}"
+        elif file_extension == 'json':
+            with open(user_input_file, 'r') as file:
+                json_data = json.load(file)
+                json_contents = json.dumps(json_data, indent=4)
+            combined_message += f"\n\n==== JSON File Input ====\n\n{json_contents}"
+        elif file_extension == 'csv':
+            with open(user_input_file, mode='r', newline='', encoding='utf-8') as file:
+                reader = csv.reader(file)
+                csv_contents = ' '.join([','.join(row) for row in reader])
+            combined_message += f"\n\n==== CSV File Input ====\n\n{csv_contents}"
+        else:
+            raise ValueError("Unsupported file extension")
+    elif user_input_file and not os.path.exists(user_input_file):
+        raise FileNotFoundError("The specified input file does not exist or is not accessible")
+
+    # Send request to the Hugging Face API
+    headers = {"Authorization": f"Bearer {api_key}"}
+    response = requests.post(API_URL, headers=headers, json={"inputs": combined_message})
+    if response.status_code == 200:
+        response_data = response.json()
+        # Save response data to JSON file
+        with open(output_json_file, 'w') as jsonfile:
+            json.dump(response_data, jsonfile, indent=4)
+        # Extract text part of response and save to text file
+        if 'generated_text' in response_data:
+            with open(output_text_file, 'w') as textfile:
+                textfile.write(response_data['generated_text'])
+        return response_data
+    else:
+        return {'error': 'Failed to get a valid response', 'status_code': response.status_code}
 
 
 def chatgpt_chat(model:str='gpt-3.5-turbo',
@@ -410,7 +744,7 @@ def chatgpt_chat(model:str='gpt-3.5-turbo',
                   presence_penalty:int=0,
                   api_key:str='sk-CiO5GzpXbxZQsMuKEQEkT3BlbkFJz4LS3FuI3f5NqmF1BXO', 
                   user_message:str='Summarize:',):
-  
+
     '''
     This function interfaces with OpenAI's GPT model to process a text input and obtain a generated response.
     It reads an additional input from a file, merges it with the user's direct input, and sends the combined
@@ -475,13 +809,12 @@ def chatgpt_chat(model:str='gpt-3.5-turbo',
                 csv_contents = ' '.join([','.join(row) for row in reader])
             combined_message += f"\n\n==== CSV File Input ====\n\n{csv_contents}"
 
-    
+
     try:
         # Set the API key (consider using environment variables for security)
-        openai.api_key = api_key
-        
+        client = OpenAI(api_key=api_key)
         # Create a chat completion request with the specified parameters
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": combined_message}],
             temperature=temperature,
@@ -491,6 +824,21 @@ def chatgpt_chat(model:str='gpt-3.5-turbo',
             presence_penalty=presence_penalty,
         )
 
+    # response = client.chat.completions.create(
+    #     model="gpt-4o",
+    #     response_format={ "type": "json_object" },
+    #     messages=[
+    #         {"role": "system", "content": system_message},
+    #         {"role": "user", "content": user_message}
+    #     ],
+    #     temperature=1,
+    #     max_tokens=1280,
+    #     top_p=1,
+    #     frequency_penalty=0,
+    #     presence_penalty=0,
+    #     )
+    # response_text = response.choices[0].message.content.strip() # response['choices'][0]['message']['content'].strip()
+    # return response_text
         # Extract and process the response
         ans_dict = response.to_dict()
         if 'choices' in ans_dict and len(ans_dict['choices']) > 0:
@@ -509,10 +857,79 @@ def chatgpt_chat(model:str='gpt-3.5-turbo',
 
     return ans
 
+import pandas as pd
+import plotly.graph_objects as go
+from typing import List, Optional
+
+def __plotly_chart(input_csv: str='dataspace/dataset.csv', 
+                 chart_type: str='line',
+                 title: str='Chart Title',
+                 x_axis: str='Date',
+                 y_axes: List[str] = ['Close'],  # Can be a list or a single string
+                 y_secondary: Optional[str] = '',  # Optional secondary Y-axis
+                 output_html: str='dataspace/plotly_viz.html'):
+    """
+    Generates a chart using Plotly based on the specified chart type with an optional secondary Y-axis and saves it as an HTML file.
+
+    Parameters:
+        input_csv (str): Path to the CSV file containing the data.
+        chart_type (str): Type of chart to generate ('line', 'bar', 'scatter').
+        x_axis (str): Column name to be used as the x-axis.
+        y_axes (list or str): Column name(s) to be used as the primary y-axis. Can be a list for multiple Y-values.
+        y_secondary (str, optional): Column name to be used as the secondary y-axis.
+        output_html (str): Path where the HTML file will be saved.
+
+    Returns:
+        None: The function saves the chart directly to an HTML file and also returns the figure.
+    """
+    data = pd.read_csv(input_csv)
+
+    # Initialize a Plotly figure
+    fig = go.Figure()
+
+    # Process primary y-axes
+    if isinstance(y_axes, list):
+        for y_axis in y_axes:
+            if chart_type == 'line':
+                fig.add_trace(go.Scatter(x=data[x_axis], y=data[y_axis], name=y_axis, yaxis='y'))
+            elif chart_type == 'bar':
+                fig.add_trace(go.Bar(x=data[x_axis], y=data[y_axis], name=y_axis, yaxis='y'))
+            elif chart_type == 'scatter':
+                fig.add_trace(go.Scatter(x=data[x_axis], y=data[y_axis], mode='markers', name=y_axis, yaxis='y'))
+    else:
+        if chart_type == 'line':
+            fig.add_trace(go.Scatter(x=data[x_axis], y=data[y_axes], name=y_axes, yaxis='y'))
+        elif chart_type == 'bar':
+            fig.add_trace(go.Bar(x=data[x_axis], y=data[y_axes], name=y_axes, yaxis='y'))
+        elif chart_type == 'scatter':
+            fig.add_trace(go.Scatter(x=data[x_axis], y=data[y_axes], mode='markers', name=y_axes, yaxis='y'))
+
+    # Process secondary y-axis if specified
+    if y_secondary==None or y_secondary!='':
+        fig.add_trace(go.Scatter(x=data[x_axis], y=data[y_secondary], name=y_secondary, yaxis='y2', marker=dict(color='red')))
+        # Create a secondary y-axis configuration
+        fig.update_layout(
+            yaxis2=dict(
+                title=y_secondary,
+                overlaying='y',
+                side='right'
+            )
+        )
+
+    # Update layout
+    fig.update_layout(
+        title=title,
+        xaxis_title=x_axis,
+        yaxis_title=','.join(y_axes) if isinstance(y_axes, list) else y_axes
+    )
+
+    # Save the figure as an HTML file and return the figure
+    fig.write_html(output_html)
+    return fig
 import sweetviz as sv
 import pandas as pd
 
-from autoviz import AutoViz_Class
+# from autoviz import AutoViz_Class
 from typing import Union
 
 
@@ -541,49 +958,50 @@ def generate_sweetviz_report(input_csv: str='dataspace/dataset.csv',
 
 
 
-def autoviz_plot(input_file_path: str = 'dataspace/AirQuality.csv', 
-                 target_variable: Union[str, None] = 'CO(GT)', 
-                 custom_plot_dir: str = 'dataspace',
-                 max_rows_analyzed: int = 150000,
-                 max_cols_analyzed: int = 30,
-                 lowess: bool = False,
-                 header: int = 0,
-                 verbose: int = 2,
-                 sep: str = "e"):
-    """
-    Generates visualizations for the dataset using AutoViz.
+# def autoviz_plot(input_file_path: str = 'dataspace/AirQuality.csv', 
+#                  target_variable: Union[str, None] = 'CO(GT)', 
+#                  custom_plot_dir: str = 'dataspace',
+#                  max_rows_analyzed: int = 150000,
+#                  max_cols_analyzed: int = 30,
+#                  lowess: bool = False,
+#                  header: int = 0,
+#                  verbose: int = 2,
+#                  sep: str = ''):
+#     """
+#     Generates visualizations for the dataset using AutoViz.
 
-    Parameters:
-    input_file_path (str): Path to the input CSV dataset.
-    target_variable (Union[str, None]): Target variable for analysis. If None, no specific target.
-    custom_plot_dir (str): Directory where plots will be saved.
-    max_rows_analyzed (int): Maximum number of rows to analyze.
-    max_cols_analyzed (int): Maximum number of columns to analyze.
-    lowess (bool): Whether to use locally weighted scatterplot smoothing.
-    header (int): Row number to use as the column names.
-    verbose (int): Verbosity level.
-    sep (str): Separator used in the CSV file.
+#     Parameters:
+#     input_file_path (str): Path to the input CSV dataset.
+#     target_variable (Union[str, None]): Target variable for analysis. If None, no specific target.
+#     custom_plot_dir (str): Directory where plots will be saved.
+#     max_rows_analyzed (int): Maximum number of rows to analyze.
+#     max_cols_analyzed (int): Maximum number of columns to analyze.
+#     lowess (bool): Whether to use locally weighted scatterplot smoothing.
+#     header (int): Row number to use as the column names.
+#     verbose (int): Verbosity level.
+#     sep (str): Separator used in the CSV file.
 
-    Returns:
-    str: Message indicating the completion of the visualization process.
-    """
-    AV = AutoViz_Class()
+#     Returns:
+#     str: Message indicating the completion of the visualization process.
+#     """
+#     AV = AutoViz_Class()
 
-    # Perform the AutoViz analysis and generate the plots
-    dft = AV.AutoViz(
-        filename=input_file_path,
-        sep=sep,
-        depVar=target_variable,
-        dfte=None,
-        header=header,
-        verbose=verbose,
-        lowess=lowess,
-        chart_format="html",
-        max_rows_analyzed=max_rows_analyzed,
-        max_cols_analyzed=max_cols_analyzed,
-        save_plot_dir=custom_plot_dir)
+#     # Perform the AutoViz analysis and generate the plots
+#     dft = AV.AutoViz(
+#         filename=input_file_path,
+#         sep=sep,
+#         depVar=target_variable,
+#         dfte=None,
+#         header=header,
+#         verbose=verbose,
+#         lowess=lowess,
+#         chart_format="html",
+#         max_rows_analyzed=max_rows_analyzed,
+#         max_cols_analyzed=max_cols_analyzed,
+#         save_plot_dir=custom_plot_dir)
 
-    return "Visualizations have been generated and saved!"
+#     return "Visualizations have been generated and saved!"
+
 from ucimlrepo import fetch_ucirepo 
 def fetch_uci_dataset(uci_data_id:int=360, 
                       output_file_path:str='dataspace/AirQuality.csv'):
@@ -649,87 +1067,115 @@ import arxiv
 import csv
 from typing import List, Dict
 import requests
+import pandas as pd
+
+import pandas as pd
+import requests
+import os
 
 def download_papers_from_arxiv_csv(filename: str = "dataspace/latest_papers.csv", 
-                                    download_folder: str = "dataspace/papers/") -> None:
+                                   download_folder: str = "dataspace/papers/",
+                                   url_col: str = "entry_id",
+                                   title_col: str = "title"):
     """
-    Downloads papers listed in a CSV file from arXiv.
+    Download papers from arXiv based on a CSV file.
 
-    Args:
-    filename (str): The path to the CSV file containing paper metadata.
-    download_folder (str): The directory where the downloaded papers will be saved.
-
-    The CSV file must contain at least the 'url' and 'title' fields.
+    Parameters:
+        filename (str): Path to the CSV file with arXiv paper details.
+        download_folder (str): Folder to save downloaded papers.
+        url_col (str): Column name in CSV that contains the arXiv URL.
+        title_col (str): Column name in CSV that contains the paper title.
     """
+    # Ensure the directory exists
+    os.makedirs(download_folder, exist_ok=True)
+    
+    # Read the CSV file using Pandas
+    df = pd.read_csv(filename)
+    
+    # Iterate over each row in the DataFrame
+    for index, row in df.iterrows():
+        arxiv_url = row[url_col]
+        title = row[title_col].replace('/', '_').replace(':', '_')  # Clean title for filename
+        arxiv_id = arxiv_url.split('/abs/')[-1].split('v')[0]  # Extract arXiv ID and remove version
 
-    try:
-        # Create a directory to save downloaded papers
-        os.makedirs(download_folder, exist_ok=True)
-        
-        # Read the CSV file to get the URLs
-        with open(filename, mode='r', newline='', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                url = row['url']
-                paper_title = row['title'].replace('/', '_')  # Replace any slashes in title to avoid file path errors
-                file_path = f"{download_folder}{paper_title}.pdf"
-                
-                # Download the paper
-                response = requests.get(url)
-                if response.status_code == 200:
-                    with open(file_path, 'wb') as f:
-                        f.write(response.content)
-                    print(f"Downloaded '{paper_title}' successfully.")
-                else:
-                    print(f"Failed to download '{paper_title}'. Status code: {response.status_code}")
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        # Format the download URL and filename
+        download_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+        file_path = os.path.join(download_folder, f"{title}.pdf")
 
-def search_arxiv_papers(search_query: str='machine learning', 
-                           filename: str = "dataspace/latest_papers.csv", 
-                           max_results: int = 5):
+        # Download the paper
+        response = requests.get(download_url)
+        if response.status_code == 200:
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            print(f"Downloaded: {file_path}")
+        else:
+            print(f"Failed to download {title} with ID {arxiv_id}")
 
+    return 'Download finished, please check your folder!'
+
+
+def search_arxiv_papers(search_query: str = 'machine learning', 
+                        filename: str = "dataspace/latest_papers.csv", 
+                        max_results: int = 5,
+                        sort_by: str = "submitted",
+                        sort_order: str = "descending"):
     """
-    Searches for papers on arXiv and saves the results to a CSV file.
+    Searches for papers on arXiv, saves the results to a CSV file, and allows sorting of the results.
 
     Args:
     search_query (str): The query term to search for on arXiv.
     filename (str): Path to save the CSV file containing the search results.
     max_results (int): Maximum number of results to fetch and save.
+    sort_by (str): Criterion to sort the search results by ("relevance", "lastUpdatedDate", "submitted").
+    sort_order (str): Order to sort the search results ("ascending", "descending").
 
     Returns:
-    list: A list of dictionaries, each containing paper details.
-
-    The function saves a CSV with fields: title, authors, abstract, published, url.
+    DataFrame: A pandas DataFrame containing details of the fetched papers.
     """
 
-    # Create a search object
+    # Map user-friendly sorting terms to arXiv API's SortCriterion and SortOrder
+    sort_options = {
+        "relevance": arxiv.SortCriterion.Relevance,
+        "lastUpdatedDate": arxiv.SortCriterion.LastUpdatedDate,
+        "submitted": arxiv.SortCriterion.SubmittedDate
+    }
+    order_options = {
+        "ascending": arxiv.SortOrder.Ascending,
+        "descending": arxiv.SortOrder.Descending
+    }
+
+    # Fetch the results using the arXiv API
     search = arxiv.Search(
         query=search_query,
         max_results=max_results,
-        sort_by=arxiv.SortCriterion.SubmittedDate
+        sort_by=sort_options.get(sort_by, arxiv.SortCriterion.SubmittedDate),
+        sort_order=order_options.get(sort_order, arxiv.SortOrder.Descending)
     )
-
-    # Fetch the results
     results = list(search.results())
-    
-    # Format the results into a readable list and write to CSV
-    with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        fieldnames = ["title", "authors", "abstract", "published", "url"]
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        
-        for result in results:
-            paper_info = {
-                "title": result.title,
-                "authors": ', '.join(author.name for author in result.authors),
-                "abstract": result.summary.replace('\n', ' '),
-                "published": result.published.strftime('%Y-%m-%d'),
-                "url": result.entry_id
-            }
-            writer.writerow(paper_info)
-    return results
 
+    # Convert results to DataFrame
+    data = []
+    for result in results:
+        entry = {
+            "entry_id": result.entry_id,
+            "updated": result.updated.isoformat(),
+            "published": result.published.isoformat(),
+            "title": result.title,
+            "authors": ', '.join([author.name for author in result.authors]),
+            "summary": result.summary.replace('\n', ' '),
+            "comment": result.comment,
+            "journal_ref": result.journal_ref,
+            "doi": result.doi,
+            "primary_category": result.primary_category,
+            "categories": ', '.join(result.categories)
+        }
+        data.append(entry)
+    df = pd.DataFrame(data)
+
+    # Save the DataFrame to CSV
+    df.to_csv(filename, index=False)
+
+    return df
 import pandas as pd
 import vectorbt as vbt
 from typing import Union

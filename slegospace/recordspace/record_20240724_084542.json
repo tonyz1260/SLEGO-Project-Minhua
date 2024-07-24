@@ -1,0 +1,31 @@
+{
+     "import_marketdata_yahoo_csv": {
+          "ticker": "msft",
+          "start_date": "2023-07-25",
+          "end_date": "2024-07-24",
+          "output_file_path": "dataspace/dataset.csv"
+     },
+     "preprocess_filling_missing_values": {
+          "input_file_path": "dataspace/dataset.csv",
+          "output_file_path": "dataspace/dataset.csv",
+          "fill_strategy": "ffill"
+     },
+     "compute_return": {
+          "input_file_path": "dataspace/dataset.csv",
+          "output_file_path": "dataspace/dataset_return.csv",
+          "window_size": 20,
+          "target_column_name": "Close",
+          "return_column_name": "Return",
+          "keep_rows": "False"
+     },
+     "plotly_chart": {
+          "input_file_path": "dataspace/dataset_return.csv",
+          "index_col": 0,
+          "x_column": "Date",
+          "y_column": "Return",
+          "title": "MSFT Stock Returns",
+          "legend_title": "Legend",
+          "mode": "lines",
+          "output_html_file_path": "dataspace/dataset_plot.html"
+     }
+}

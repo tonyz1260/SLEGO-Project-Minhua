@@ -26,7 +26,7 @@ def get_environment_config() -> Dict[str, Any]:
         drive.mount('/content/drive', force_remount=True)
     elif env == 'github-codespaces':
         print("Running in GitHub Codespaces environment.")
-        config['drive_mainfolder'] = '/workspaces/SELGO-Project'
+        config['drive_mainfolder'] = '/workspaces/SLEGO-Project'
         config['drive_folder'] = '/workspaces/'
     else:  # local-jupyter
         print("Running in a local Jupyter environment.")
@@ -34,7 +34,7 @@ def get_environment_config() -> Dict[str, Any]:
         config['drive_mainfolder'] = f"/Users/an/Library/CloudStorage/GoogleDrive-{gmailaccount}/My Drive/SLEGO"
         config['drive_folder'] = f"/Users/an/Library/CloudStorage/GoogleDrive-{gmailaccount}/My Drive/"
     
-    config['repo_url'] = 'https://github.com/alanntl/SELGO-Project.git'
+    config['repo_url'] = 'https://github.com/alanntl/SLEGO-Project.git'
     config['slego_env'] = f"{config['drive_folder']}/slego_env_v0_0_1"
     config['requirements_file'] = f"{config['drive_mainfolder']}/requirements.txt"
     

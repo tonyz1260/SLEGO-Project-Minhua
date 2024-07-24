@@ -1,25 +1,22 @@
-
-
+import os
+import ast
 import panel as pn
 import inspect
-import ast  # For safely evaluating the input string
-import re
-import importlib
 import json
+import importlib
+import re
 import io
 import time
-import os
 import param
-import json
 from datetime import datetime
 import itertools
 import pandas as pd
 import recommender as rc
+
 pn.extension()
-pn.extension(sizing_mode = 'stretch_both')
+pn.extension(sizing_mode='stretch_both')
 pn.extension('ace', 'jsoneditor')
 pn.extension('tabulator')
-
 
 class SLEGOApp:
     def __init__(self, config):
@@ -49,7 +46,7 @@ class SLEGOApp:
             value=['util.py', 'func_data_preprocss.py', 'func_yfinance.py', 'llm.py',
                    'func_viz.py', 'func_eda.py', 'func_uci_dataset.py', 'webscrape.py',
                    'func_arxiv.py', 'func_backtest.py', 'func_autogluon.py'],
-            options=self.py_files, height=60
+            options=self.py_files, height=80
         )
         self.compute_btn = pn.widgets.Button(name='Compute', height=50, button_type='primary')
         self.savepipe_btn = pn.widgets.Button(name='Save Pipeline', height=35)
@@ -78,7 +75,7 @@ class SLEGOApp:
         import func
         importlib.reload(func)
         self.func = func
-        self.funccombo = self.func._create_multi_select_combobox(self.func)
+        self.funccombo = self.create_multi_select_combobox(self.func)
 
     def delete_func_file(self):
         if os.path.exists(self.func_file_path):
@@ -129,7 +126,7 @@ class SLEGOApp:
     def funccombo_change(self, event):
         self.output_text.value = ''
         list_funcs = self.funccombo.value
-        list_params = [self.func._extract_parameter(eval('self.func.' + funcchoice)) for funcchoice in list_funcs]
+        list_params = [self.extract_parameter(eval('self.func.' + funcchoice)) for funcchoice in list_funcs]
         funcs_params = dict(zip(list_funcs, list_params))
         formatted_data = json.dumps(funcs_params, indent=5)
         self.json_editor.value = funcs_params
@@ -249,8 +246,7 @@ class SLEGOApp:
     def folder_select_changed(self, event):
         self.file_text.value = '/' + str(self.folder_select.value)
         self.on_filefolder_confirm_btn_click(None)
-
-    def get_doc_string(self, pipeline):
+def get_doc_string(self, pipeline):
         text = self.input_text.value
         output = ''
         data = json.loads(text)
@@ -288,7 +284,30 @@ class SLEGOApp:
         file_list = os.listdir(selected_folder_path)
         df_file = pd.DataFrame(file_list, columns=['Filter Files :'])
         self.file_table.value = df_file
-            
+
+    def create_multi_select_combobox(self, target_module):
+        """
+        Creates a multi-select combobox with all functions from the target_module.
+        """
+        module_name = target_module.__name__
+        functions = [name for name, obj in inspect.getmembers(target_module, inspect.isfunction)
+                     if obj.__module__ == module_name and not name.startswith('_')]
+        multi_combobox = pn.widgets.MultiChoice(name='Functions:', options=functions, height=150)
+        return multi_combobox
+
+    def extract_parameter(self, func):
+        """
+        Extracts the names and default values of the parameters of a function as a dictionary.
+        """
+        signature = inspect.signature(func)
+        parameters = signature.parameters
+        parameter_dict = {}
+        for name, param in parameters.items():
+            if param.default != inspect.Parameter.empty:
+                parameter_dict[name] = param.default
+            else:
+                parameter_dict[name] = None
+        return parameter_dict
 
     def run(self):
         if not self.is_colab_runtime():
@@ -301,3 +320,50 @@ class SLEGOApp:
         else:
             from IPython.display import display
             display(self.app)
+
+    def test_function(self, input_string:str='Hello!', 
+              output_file_path:str='dataspace/output.txt'):
+        """
+        A simple function to save the provided input string to a specified text file and return the string.
+
+        Parameters:
+        - input_string (str): The string to be saved.
+        - output_file_path (str): The file path where the string should be saved.
+
+        Returns:
+        - str: The same input string.
+        """
+        with open(output_file_path, 'w') as file:
+            file.write(input_string)
+        return input_string
+
+    def compute(self, module_name, input):
+        module = __import__(module_name)
+        pipeline_dict = json.loads(input)
+        output = ""
+        for function_name, parameters in pipeline_dict.items():
+            function = eval(f"module.{function_name}")
+            result = function(**parameters)
+            output += f"\n===================={function_name}====================\n\n"
+            output += str(result)
+        return output
+
+    def combine_json_files(self, directory, output_file):
+        """
+        Combine all JSON files in a directory into a single JSON file.
+
+        Args:
+        directory (str): The directory containing JSON files.
+        output_file (str): The path to the output JSON file.
+        """
+        combined_data = []
+        for filename in os.listdir(directory):
+            if filename.endswith('.json'):
+                file_path = os.path.join(directory, filename)
+                with open(file_path, 'r') as file:
+                    data = json.load(file)
+                    combined_data.append(data)
+        with open(output_file, 'w') as file:
+            json.dump(combined_data, file, indent=4)
+        print("All JSON files have been combined into:", output_file)
+
