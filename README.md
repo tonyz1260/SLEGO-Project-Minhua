@@ -1,4 +1,5 @@
 SLEGO: A Collaborative Data Analytics System
+https://arxiv.org/pdf/2406.11232
 
 Overview
 
