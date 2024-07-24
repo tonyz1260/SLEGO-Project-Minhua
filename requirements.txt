@@ -1,4 +1,5 @@
 panel
+jupyter_bokeh
 openml
 ucimlrepo
 openai==1.19.0
