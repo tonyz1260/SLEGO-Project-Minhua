@@ -44,6 +44,7 @@ def get_environment_config() -> Dict[str, Any]:
     config['recordspace'] = f"{config['folder_path']}/recordspace"
     config['functionspace'] = f"{config['folder_path']}/functionspace"
     config['knowledgespace'] = f"{config['folder_path']}/knowledgespace"
+    config['ontologyspace'] = f"{config['folder_path']}/ontologyspace"
     
     os.environ['DRIVE_MAINFOLDER'] = config['drive_mainfolder']
     os.environ['DRIVE_FOLDER'] = config['drive_folder']

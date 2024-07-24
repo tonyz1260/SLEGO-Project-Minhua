@@ -1,0 +1,10 @@
+{
+     "compute_return": {
+          "input_file_path": "dataspace/dataset.csv",
+          "output_file_path": "dataspace/dataset_return.csv",
+          "window_size": 20,
+          "target_column_name": "Close",
+          "return_column_name": "Return",
+          "keep_rows": false
+     }
+}

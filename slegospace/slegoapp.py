@@ -11,8 +11,12 @@ import param
 from datetime import datetime
 import itertools
 import pandas as pd
+import kglab
+from pyvis.network import Network
+from rdflib import URIRef
+import webbrowser
 import recommender as rc
-
+import kglab
 pn.extension()
 pn.extension(sizing_mode='stretch_both')
 pn.extension('ace', 'jsoneditor')
@@ -26,6 +30,7 @@ class SLEGOApp:
         self.dataspace = config['dataspace']
         self.recordspace = config['recordspace']
         self.knowledgespace = config['knowledgespace']
+        self.ontologyspace = config['ontologyspace']  # New: Add ontologyspace to config
         self.func_file_path = 'func.py'
         self.setup_panel_extensions()
         self.initialize_widgets()
@@ -54,7 +59,7 @@ class SLEGOApp:
         self.json_toggle = pn.widgets.Toggle(name='Input mode: text or form', height=35, button_type='warning')
         self.json_editor = pn.widgets.JSONEditor(value={}, mode='form')
         self.input_text = pn.widgets.TextAreaInput(value='', placeholder='input the parameters')
-        self.progress_text = pn.widgets.TextAreaInput(value='', placeholder='Input your analytics query here', name='User query inputs for recommendation:', height=150)
+        self.progress_text = pn.widgets.TextAreaInput(value='', placeholder='Input your analytics query here', name='User query inputs for recommendation or SPARQL:', height=150)
         self.output_text = pn.widgets.TextAreaInput(value='', placeholder='Results will be shown here', name='System output message:')
         self.recommendation_btn = pn.widgets.Button(name='Get Recommendation', height=35, button_type='success')
         self.recomAPI_text = pn.widgets.TextInput(value='', placeholder='Your AI API key', height=35)
@@ -68,6 +73,8 @@ class SLEGOApp:
         self.file_delete = pn.widgets.Button(name='Delete')
         self.file_table = self.create_file_table()
         self.widget_tab = pn.Tabs(('json input', self.json_editor), ('text input', self.input_text))
+        # New: Add ontology visualization button
+        self.ontology_btn = pn.widgets.Button(name='Show Ontology', height=35)
 
     def setup_func_module(self):
         self.delete_func_file()
@@ -109,15 +116,17 @@ class SLEGOApp:
         self.file_upload.on_click(self.on_file_buttons_click)
         self.file_delete.on_click(self.on_file_buttons_click)
         self.folder_select.param.watch(self.folder_select_changed, 'value')
+        # New: Add event handler for ontology button
+        self.ontology_btn.on_click(self.ontology_btn_click)
 
     def create_layout(self):
         widget_input = pn.Column(pn.layout.Divider(height=10, margin=(5)), self.widget_tab)
-        widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text)
+        widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text, self.ontology_btn)
         widget_updownload = pn.Column(pn.Row(self.file_view, self.file_download), self.file_input, pn.Row(self.file_upload, self.file_delete), height=150)
         widget_files = pn.Column(self.folder_select, pn.Row(self.file_text, self.filefolder_confirm_btn, height=55), self.file_table, widget_updownload, width=250, margin=(0,20,0,0))
         widget_funcsel = pn.Column(self.funcfilecombo, self.funccombo, self.compute_btn, widget_btns)
         widget_recom = pn.Row(self.recommendation_btn, self.recomAPI_text)
-        
+    
         self.app = pn.Row(widget_files, pn.Column(widget_funcsel, widget_input), pn.Column(widget_recom, self.progress_text, pn.layout.Divider(height=10, margin=(10)), self.output_text))
 
     def funcfilecombo_change(self, event):
@@ -368,3 +377,101 @@ class SLEGOApp:
             json.dump(combined_data, file, indent=4)
         print("All JSON files have been combined into:", output_file)
 
+    def ontology_btn_click(self, event):
+        input_file_path = os.path.join(self.ontologyspace, "hfd.ttl")
+        output_file_path = os.path.join(self.ontologyspace, "hfd_visualization.html")
+        rdf_html_path = self.__visualize_rdf_graph(input_file_path, output_file_path)
+
+        html_file = os.path.join(self.folder_path, rdf_html_path)
+        if os.path.exists(html_file):
+            webbrowser.open_new_tab(f'file://{os.path.abspath(html_file)}')
+        else:
+            print(f"The file {html_file} does not exist.")
+
+    def __visualize_rdf_graph(self, input_file_path, output_file_path):
+        # Load RDF data
+        kg = kglab.KnowledgeGraph().load_rdf(input_file_path)
+        
+        # Measure graph
+        measure = kglab.Measure()
+        measure.measure_graph(kg)
+        print(f"edges: {measure.get_edge_count()}")
+        print(f"nodes: {measure.get_node_count()}")
+
+        # Define visualization style
+        VIS_STYLE = {
+            "Measure": {"color": "#FFB6C1", "shape": "box", "size": 70},
+            "Variable": {"color": "#D8BFD8", "shape": "box", "size": 60},
+            "Microservice": {"color": "#ADD8E6", "shape": "box", "size": 50},
+            "DataSet": {"color": "#FFD700", "shape": "box", "size": 40},
+            "DataSource": {"color": "#FFE4C4", "shape": "box", "size": 30}
+        }
+
+        # Create Pyvis Network
+        net = Network(notebook=True, height="1000px", width="100%", bgcolor="#ffffff",
+                      font_color="black", directed=True, cdn_resources='remote')
+
+        # Set visualization options
+        net.set_options("""
+        var options = {
+            "nodes": {
+                "shape": "box",
+                "size": 30,
+                "font": {
+                    "size": 14,
+                    "face": "Tahoma"
+                }
+            },
+            "edges": {
+                "arrows": {
+                    "to": {
+                        "enabled": true,
+                        "scaleFactor": 1
+                    }
+                },
+                "smooth": {
+                    "type": "continuous"
+                }
+            },
+            "layout": {
+                "hierarchical": {
+                    "enabled": true,
+                    "levelSeparation": 250,
+                    "nodeSpacing": 200,
+                    "treeSpacing": 300,
+                    "blockShifting": true,
+                    "edgeMinimization": true,
+                    "parentCentralization": true,
+                    "direction": "LR",
+                    "sortMethod": "hubsize"
+                }
+            },
+            "physics": {
+                "enabled": false
+            }
+        }
+        """)
+
+        # Add nodes and edges
+        for subject, predicate, obj in kg.rdf_graph().triples((None, None, None)):
+            if isinstance(subject, URIRef):
+                self.__add_node(net, kg, subject, VIS_STYLE)
+            if isinstance(obj, URIRef):
+                self.__add_node(net, kg, obj, VIS_STYLE)
+            if isinstance(predicate, URIRef):
+                edge_label = predicate.split("/")[-1]
+                net.add_edge(str(subject), str(obj), label=edge_label)
+
+        # Generate visualization
+        net.save_graph(output_file_path)
+        return output_file_path
+
+    def __add_node(self, net, kg, node, VIS_STYLE):
+        label = node.split("/")[-1]
+        node_class = kg.rdf_graph().value(node, URIRef("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"))
+        if node_class:
+            class_name = node_class.split("/")[-1]
+            style = VIS_STYLE.get(class_name, {"color": "gray", "shape": "ellipse", "size": 10})
+        else:
+            style = {"color": "gray", "shape": "ellipse", "size": 10}
+        net.add_node(str(node), label=label, color=style["color"], shape=style["shape"], size=style["size"])
