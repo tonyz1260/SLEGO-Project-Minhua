@@ -17,6 +17,7 @@ For more detailed information, you can refer to the paper: [SLEGO: A Collaborati
 
 - **Finance:** Streamline financial data analysis with reusable microservices.
 - **Machine Learning:** Simplify the process of building and deploying ML models.
+- All other data-intensive applications
 
 ## Getting Started
 
