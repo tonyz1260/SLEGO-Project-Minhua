@@ -30,6 +30,8 @@ This project is licensed under the Apache-2.0 license. See the LICENSE file for 
 
 ## Opening the App on Codespaces (GitHub)
 
+TLDR: https://codespaces.new/alanntl/SLEGO-Project
+
 1. **Fork the Repository:**
    - Go to the [SLEGO repository](https://github.com/your-repo-url) and fork it to your GitHub account.
 
