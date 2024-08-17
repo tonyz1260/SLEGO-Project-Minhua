@@ -1,0 +1,47 @@
+name: Trigger auto deployment for container-app-sywxj4ho74tkg
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ alanntl ]
+    paths:
+    - '//**'
+    - '.github/workflows/container-app-sywxj4ho74tkg-AutoDeployTrigger-9d39248a-3d86-46bc-9792-d6e351d8fa81.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.CONTAINERAPPSYWXJ4HO74TKG_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CONTAINERAPPSYWXJ4HO74TKG_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CONTAINERAPPSYWXJ4HO74TKG_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: 
+          registryUsername: ${{ secrets.CONTAINERAPPSYWXJ4HO74TKG_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.CONTAINERAPPSYWXJ4HO74TKG_REGISTRY_PASSWORD }}
+          containerAppName: container-app-sywxj4ho74tkg
+          resourceGroup: slegoprojectbb07
+          imageToBuild: default/container-app-sywxj4ho74tkg:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
