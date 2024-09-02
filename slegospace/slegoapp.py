@@ -16,6 +16,7 @@ from pyvis.network import Network
 from rdflib import URIRef
 import webbrowser
 import recommender as rc
+from validate_func import *
 # import kglab
 pn.extension()
 pn.extension(sizing_mode='stretch_both')
@@ -37,6 +38,7 @@ class SLEGOApp:
         self.setup_func_module()
         self.setup_event_handlers()
         self.create_layout()
+        self.create_template()
 
     def setup_panel_extensions(self):
         pn.extension()
@@ -75,6 +77,10 @@ class SLEGOApp:
         self.widget_tab = pn.Tabs(('json input', self.json_editor), ('text input', self.input_text))
         # New: Add ontology visualization button
         self.ontology_btn = pn.widgets.Button(name='Show Ontology', height=35)
+        self.rules_popup = pn.Card(pn.pane.Markdown("## Modal Title\nThis is the content inside the modal."), title="Modal", width=80, height=80, header_background="lightgray")
+        self.rules_button = pn.widgets.Button(name="Microservice Rules", button_type="primary")
+
+
 
     def setup_func_module(self):
         self.delete_func_file()
@@ -318,15 +324,28 @@ class SLEGOApp:
             else:
                 parameter_dict[name] = None
         return parameter_dict
+    
+    def create_template(self):
+        template = pn.template.MaterialTemplate(
+            title='SLEGO - Software Lego: A Collaborative and Modular Architecture for Data Analytics',
+            sidebar=[],
+        )
+
+        template.modal.append("## This is a modal dialog")
+
+        template.main.append(self.app)
+        self.template = template
+
+    def toggle_rule(self, event):
+        print("Toggling rules hahahahahhahahah")
+        self.template.open_modal()
 
     def run(self):
         if not self.is_colab_runtime():
-            template = pn.template.MaterialTemplate(
-                title='SLEGO - Software Lego: A Collaborative and Modular Architecture for Data Analytics',
-                sidebar=[],
-            )
-            template.main.append(self.app)
-            template.show()
+            # self.rules_button.on_click(self.toggle_rule)
+
+            self.template.main.append(self.app)
+            self.template.show()
         else:
             from IPython.display import display
             display(self.app)
