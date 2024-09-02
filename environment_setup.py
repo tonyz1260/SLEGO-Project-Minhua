@@ -25,7 +25,7 @@ def get_environment_config() -> Dict[str, Any]:
         from google.colab import drive
         drive.mount('/content/drive', force_remount=True)
     elif env == 'github-codespaces':
-        print("Running in GitHub Codespaces environment.")
+        print("Running in GitHub Codespaces environment. Let's go hhhhhhhhahah")
         config['drive_mainfolder'] = '/workspaces/SLEGO-Project-Minhua'
         config['drive_folder'] = '/workspaces/'
     else:  # local-jupyter

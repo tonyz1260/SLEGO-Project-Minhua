@@ -11,12 +11,12 @@ import param
 from datetime import datetime
 import itertools
 import pandas as pd
-import kglab
+# import kglab
 from pyvis.network import Network
 from rdflib import URIRef
 import webbrowser
 import recommender as rc
-import kglab
+# import kglab
 pn.extension()
 pn.extension(sizing_mode='stretch_both')
 pn.extension('ace', 'jsoneditor')
@@ -388,83 +388,83 @@ class SLEGOApp:
         else:
             print(f"The file {html_file} does not exist.")
 
-    def __visualize_rdf_graph(self, input_file_path, output_file_path):
-        # Load RDF data
-        kg = kglab.KnowledgeGraph().load_rdf(input_file_path)
+    # def __visualize_rdf_graph(self, input_file_path, output_file_path):
+    #     # Load RDF data
+    #     kg = kglab.KnowledgeGraph().load_rdf(input_file_path)
         
-        # Measure graph
-        measure = kglab.Measure()
-        measure.measure_graph(kg)
-        print(f"edges: {measure.get_edge_count()}")
-        print(f"nodes: {measure.get_node_count()}")
+    #     # Measure graph
+    #     measure = kglab.Measure()
+    #     measure.measure_graph(kg)
+    #     print(f"edges: {measure.get_edge_count()}")
+    #     print(f"nodes: {measure.get_node_count()}")
 
-        # Define visualization style
-        VIS_STYLE = {
-            "Measure": {"color": "#FFB6C1", "shape": "box", "size": 70},
-            "Variable": {"color": "#D8BFD8", "shape": "box", "size": 60},
-            "Microservice": {"color": "#ADD8E6", "shape": "box", "size": 50},
-            "DataSet": {"color": "#FFD700", "shape": "box", "size": 40},
-            "DataSource": {"color": "#FFE4C4", "shape": "box", "size": 30}
-        }
+    #     # Define visualization style
+    #     VIS_STYLE = {
+    #         "Measure": {"color": "#FFB6C1", "shape": "box", "size": 70},
+    #         "Variable": {"color": "#D8BFD8", "shape": "box", "size": 60},
+    #         "Microservice": {"color": "#ADD8E6", "shape": "box", "size": 50},
+    #         "DataSet": {"color": "#FFD700", "shape": "box", "size": 40},
+    #         "DataSource": {"color": "#FFE4C4", "shape": "box", "size": 30}
+    #     }
 
-        # Create Pyvis Network
-        net = Network(notebook=True, height="1000px", width="100%", bgcolor="#ffffff",
-                      font_color="black", directed=True, cdn_resources='remote')
+    #     # Create Pyvis Network
+    #     net = Network(notebook=True, height="1000px", width="100%", bgcolor="#ffffff",
+    #                   font_color="black", directed=True, cdn_resources='remote')
 
-        # Set visualization options
-        net.set_options("""
-        var options = {
-            "nodes": {
-                "shape": "box",
-                "size": 30,
-                "font": {
-                    "size": 14,
-                    "face": "Tahoma"
-                }
-            },
-            "edges": {
-                "arrows": {
-                    "to": {
-                        "enabled": true,
-                        "scaleFactor": 1
-                    }
-                },
-                "smooth": {
-                    "type": "continuous"
-                }
-            },
-            "layout": {
-                "hierarchical": {
-                    "enabled": true,
-                    "levelSeparation": 250,
-                    "nodeSpacing": 200,
-                    "treeSpacing": 300,
-                    "blockShifting": true,
-                    "edgeMinimization": true,
-                    "parentCentralization": true,
-                    "direction": "LR",
-                    "sortMethod": "hubsize"
-                }
-            },
-            "physics": {
-                "enabled": false
-            }
-        }
-        """)
+    #     # Set visualization options
+    #     net.set_options("""
+    #     var options = {
+    #         "nodes": {
+    #             "shape": "box",
+    #             "size": 30,
+    #             "font": {
+    #                 "size": 14,
+    #                 "face": "Tahoma"
+    #             }
+    #         },
+    #         "edges": {
+    #             "arrows": {
+    #                 "to": {
+    #                     "enabled": true,
+    #                     "scaleFactor": 1
+    #                 }
+    #             },
+    #             "smooth": {
+    #                 "type": "continuous"
+    #             }
+    #         },
+    #         "layout": {
+    #             "hierarchical": {
+    #                 "enabled": true,
+    #                 "levelSeparation": 250,
+    #                 "nodeSpacing": 200,
+    #                 "treeSpacing": 300,
+    #                 "blockShifting": true,
+    #                 "edgeMinimization": true,
+    #                 "parentCentralization": true,
+    #                 "direction": "LR",
+    #                 "sortMethod": "hubsize"
+    #             }
+    #         },
+    #         "physics": {
+    #             "enabled": false
+    #         }
+    #     }
+    #     """)
 
-        # Add nodes and edges
-        for subject, predicate, obj in kg.rdf_graph().triples((None, None, None)):
-            if isinstance(subject, URIRef):
-                self.__add_node(net, kg, subject, VIS_STYLE)
-            if isinstance(obj, URIRef):
-                self.__add_node(net, kg, obj, VIS_STYLE)
-            if isinstance(predicate, URIRef):
-                edge_label = predicate.split("/")[-1]
-                net.add_edge(str(subject), str(obj), label=edge_label)
+    #     # Add nodes and edges
+    #     for subject, predicate, obj in kg.rdf_graph().triples((None, None, None)):
+    #         if isinstance(subject, URIRef):
+    #             self.__add_node(net, kg, subject, VIS_STYLE)
+    #         if isinstance(obj, URIRef):
+    #             self.__add_node(net, kg, obj, VIS_STYLE)
+    #         if isinstance(predicate, URIRef):
+    #             edge_label = predicate.split("/")[-1]
+    #             net.add_edge(str(subject), str(obj), label=edge_label)
 
-        # Generate visualization
-        net.save_graph(output_file_path)
-        return output_file_path
+    #     # Generate visualization
+    #     net.save_graph(output_file_path)
+    #     return output_file_path
 
     def __add_node(self, net, kg, node, VIS_STYLE):
         label = node.split("/")[-1]
