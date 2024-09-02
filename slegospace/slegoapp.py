@@ -18,6 +18,9 @@ import webbrowser
 import recommender as rc
 from validate_func import *
 # import kglab
+
+pn.state.kill_all_servers()
+
 pn.extension()
 pn.extension(sizing_mode='stretch_both')
 pn.extension('ace', 'jsoneditor')
@@ -128,7 +131,7 @@ class SLEGOApp:
     def create_layout(self):
         widget_input = pn.Column(pn.layout.Divider(height=10, margin=(5)), self.widget_tab)
         widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text, self.ontology_btn)
-        widget_updownload = pn.Column(pn.Row(self.file_view, self.file_download), self.file_input, pn.Row(self.file_upload, self.file_delete), height=150)
+        widget_updownload = pn.Column(pn.Row(self.file_view, self.file_download), self.file_input, pn.Row(self.file_upload, self.file_delete), self.rules_button, height=150)
         widget_files = pn.Column(self.folder_select, pn.Row(self.file_text, self.filefolder_confirm_btn, height=55), self.file_table, widget_updownload, width=250, margin=(0,20,0,0))
         widget_funcsel = pn.Column(self.funcfilecombo, self.funccombo, self.compute_btn, widget_btns)
         widget_recom = pn.Row(self.recommendation_btn, self.recomAPI_text)
@@ -325,24 +328,36 @@ class SLEGOApp:
                 parameter_dict[name] = None
         return parameter_dict
     
+    def create_validation_rules_message(self):
+        message = "Microservice Rules:\n\n"
+        error_rule_message = ""
+        warning_rule_message = ""
+        for rule in validation_rules:
+            if rule.type == 'ERROR':
+                error_rule_message += f"{rule.description}\n"
+            if rule.type == 'WARNING':
+                warning_rule_message += f"{rule.description}\n"
+        message = f"**The following rules will lead to unsuccessful upload if not followed**\n\n{error_rule_message}\n\n"
+        message += f"**The following rules are recommended to be followed**\n\n{warning_rule_message}"
+        return message
+    
     def create_template(self):
         template = pn.template.MaterialTemplate(
             title='SLEGO - Software Lego: A Collaborative and Modular Architecture for Data Analytics',
             sidebar=[],
         )
 
-        template.modal.append("## This is a modal dialog")
+        template.modal.append(self.create_validation_rules_message())
 
         template.main.append(self.app)
         self.template = template
 
     def toggle_rule(self, event):
-        print("Toggling rules hahahahahhahahah")
         self.template.open_modal()
 
     def run(self):
         if not self.is_colab_runtime():
-            # self.rules_button.on_click(self.toggle_rule)
+            self.rules_button.on_click(self.toggle_rule)
 
             self.template.main.append(self.app)
             self.template.show()

@@ -42,7 +42,7 @@ def check_relevance():
     )
 
     # Print the response from the model
-    print(response.choices[0].message['content'])
+    print(response.choices[0].message.content)
 
 def check_parameters(name, obj):
     sig = inspect.signature(obj)
