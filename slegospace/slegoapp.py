@@ -333,9 +333,9 @@ class SLEGOApp:
         error_rule_message = ""
         warning_rule_message = ""
         for rule in validation_rules:
-            if rule.type == 'ERROR':
+            if rule.issue_type == 'ERROR':
                 error_rule_message += f"{rule.description}\n"
-            if rule.type == 'WARNING':
+            if rule.issue_type == 'WARNING':
                 warning_rule_message += f"{rule.description}\n"
         message = f"**The following rules will lead to unsuccessful upload if not followed**\n\n{error_rule_message}\n\n"
         message += f"**The following rules are recommended to be followed**\n\n{warning_rule_message}"
