@@ -122,7 +122,8 @@ class SLEGOApp:
         self.filefolder_confirm_btn.on_click(self.on_filefolder_confirm_btn_click)
         self.file_view.on_click(self.on_file_buttons_click)
         self.file_download.on_click(self.on_file_buttons_click)
-        self.file_upload.on_click(self.on_file_buttons_click)
+        # self.file_upload.on_click(self.on_file_buttons_click)
+        self.file_upload.on_click(self.file_upload_click)
         self.file_delete.on_click(self.on_file_buttons_click)
         self.folder_select.param.watch(self.folder_select_changed, 'value')
         # New: Add event handler for ontology button
@@ -235,6 +236,39 @@ class SLEGOApp:
         self.save_record('knowledgespace', data, pipeline_name)
         self.on_filefolder_confirm_btn_click(None)
 
+    def file_upload_click(self, event):
+        if self.file_input.filename:
+            filename = self.file_input.filename
+            file_content = self.file_input.value
+
+            temp_file_path = self.folder_path + '/temp/' + filename
+            with open(temp_file_path, 'wb') as f:
+                f.write(file_content)
+
+            flag, message = function_validation_result(temp_file_path)
+
+            if flag is False:
+                self.output_text.value = "File Upload Fail due to validation error\n" + message
+            else:
+                self.output_text.value = f'Uploading {filename}...'
+                folder = self.folder_path + '/' + self.file_text.value
+                file_path = folder + '/' + filename
+
+                # If a file already exists with the same name, add a timestamp to the filename
+                if os.path.exists(file_path):
+                    filename = datetime.now().strftime("%Y%m%d_%H%M%S_") + filename
+                    file_path = folder + '/' + filename
+                    self.output_text.value = f'File with the same name already exists. Renaming to {filename}...'
+
+                with open(file_path, 'wb') as f:
+                    f.write(file_content)
+                self.output_text.value = f'{filename} uploaded successfully!'
+                self.refresh_file_table()
+
+            os.remove(temp_file_path)
+        else:
+            self.output_text.value = 'Please select a file to upload!'
+
     def on_file_buttons_click(self, event):
         self.output_text.value = ''
         file_list = self.file_table.selected_dataframe.values.tolist()
@@ -248,7 +282,7 @@ class SLEGOApp:
                         self.output_text.value += file.read()
             elif event.obj.name == 'Download':
                 self.output_text.value = 'The file is already saved to your folder!'
-            elif event.obj.name == 'Upload':
+            elif event.obj.name == 'Upload' and not self.file_input.filename:
                 self.output_text.value = 'Please use the file input widget to upload!'
             elif event.obj.name == 'Delete':
                 self.output_text.value = 'Delete functionality is not implemented for safety reasons.'

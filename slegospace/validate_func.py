@@ -45,9 +45,9 @@ def check_relevance(name, obj):
     You must not add any additional text or characters to the response. From here, I will provide you with the docstrings of existing functions that you need to assess."
 
     # iterate through the existing functions in func.py and provide the docstrings for the prompt
-    for name, obj in inspect.getmembers(func):
-        if inspect.isfunction(obj) and obj.__module__ == func.__name__:
-            prompt += f"\n\nFunction: {name}\nDocstring: {inspect.getdoc(obj)}\n"
+    for func_name, func_obj in inspect.getmembers(func):
+        if inspect.isfunction(func_obj) and func_obj.__module__ == func.__name__:
+            prompt += f"\n\nFunction: {func_name}\nDocstring: {inspect.getdoc(func_obj)}\n"
 
     # append the function (source_code) that needs to be assessed
     prompt += "Here is the function that you need to assess"
@@ -56,15 +56,20 @@ def check_relevance(name, obj):
 
     # Create a chat completion request
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello, how are you?"},
+            {"role": "user", "content": f"{prompt}"},
         ],
     )
 
     # Print the response from the model
     print(response.choices[0].message.content)
+
+    if response.choices[0].message.content == 'Relevance: true; Parameter: both':
+        return ValidationResult(name, True, 'Function is relevant to existing functions and related to finance domain', 'WARNING')
+    else:
+        return ValidationResult(name, False, 'Function is not relevant to existing functions or related to finance domain', 'WARNING')
 
 def check_parameters(name, obj):
     sig = inspect.signature(obj)
@@ -126,16 +131,23 @@ def check_syntax_error(name, obj):
     
     return ValidationResult(name, True, 'Function has no syntax error', 'ERROR')
 
-
+def check_syntax_error1(name, obj):
+    try:
+        ast.parse(inspect.getsource(obj))
+    except SyntaxError as e:
+        return ValidationResult(name, False, f'Syntax Error on line {e.lineno} character {e.offset}: {e.msg}\nCode: {e.text}', 'ERROR')
+    
+    return ValidationResult(name, True, 'Function has no syntax error', 'ERROR')
 
 # Create a sorted list of validation models
 validation_rules = [
     ValidationModel(check_syntax_error, 1, 'Function does not contain syntax error', 'ERROR'),
     ValidationModel(check_docstring, 2, 'Function contains docString', 'ERROR'),
     ValidationModel(check_annotations_and_default_values, 3, 'Function parameters contain type annotation and default values', 'ERROR'),
-    ValidationModel(check_relevance, 4, 'Ideally, function should be relevant to existing functions or related to finance domain', 'WARNING'),
-    ValidationModel(check_parameters, 5, 'Ideally, function should have more than 2 parameters', 'WARNING'),
-    ValidationModel(check_input_output_stream, 6, 'Ideally, function should have both input and output streams', 'WARNING'),
+    ValidationModel(check_syntax_error1, 4, 'Function does not contain syntax error', 'ERROR'),
+    ValidationModel(check_relevance, 5, 'Ideally, function should be relevant to existing functions or related to finance domain', 'WARNING'),
+    ValidationModel(check_parameters, 6, 'Ideally, function should have more than 2 parameters', 'WARNING'),
+    ValidationModel(check_input_output_stream, 7, 'Ideally, function should have both input and output streams', 'WARNING'),
 ]
 
 validation_rules.sort(key=lambda x: x.priority)
@@ -147,11 +159,11 @@ def validate_func(module):
 
     for name, obj in inspect.getmembers(module):
         if inspect.isfunction(obj) and obj.__module__ == module.__name__:
-            # print(f'Function: {name}')
+            print(f'Function: {name}')
             # print(f'Args: {inspect.getfullargspec(obj)}')
             # print(f'Doc: {inspect.getdoc(obj)}')
             # print(f'Annotations: {obj.__annotations__}')
-            # print()
+            print()
 
             for validation_model in validation_rules:
                 validate_result.append(validation_model.function(name, obj))
@@ -169,13 +181,20 @@ def function_validation_result(file_path):
 
     validation_result = validate_func(module)
     flag = True
-    message = ""
+    message, error_message, warning_message = "", "", ""
     for result in validation_result:
-        if result.get_result() == False:
-            message += str(result)
+        if result.get_result() is False:
             if result.issue_type == 'ERROR':
                 flag = False
+                error_message += str(result)
+            elif result.issue_type == 'WARNING':
+                warning_message += str(result)
+    message = error_message + "\n" + warning_message
+
     if flag:
         message = "All functions are valid"
-    
+    # print(flag, message)
     return flag, message
+
+
+print(function_validation_result('func_api.py'))
