@@ -74,14 +74,14 @@ class SLEGOApp:
         self.file_view = pn.widgets.Button(name='View')
         self.file_download = pn.widgets.Button(name='Download')
         self.file_upload = pn.widgets.Button(name='Upload')
-        self.file_input = pn.widgets.FileInput(name='Upload file')
+        self.file_input = pn.widgets.FileInput(name='Upload file', width=180)
         self.file_delete = pn.widgets.Button(name='Delete')
         self.file_table = self.create_file_table()
         self.widget_tab = pn.Tabs(('json input', self.json_editor), ('text input', self.input_text))
         # New: Add ontology visualization button
         self.ontology_btn = pn.widgets.Button(name='Show Ontology', height=35)
         self.rules_popup = pn.Card(pn.pane.Markdown("## Modal Title\nThis is the content inside the modal."), title="Modal", width=80, height=80, header_background="lightgray")
-        self.rules_button = pn.widgets.Button(name="Microservice Rules", button_type="primary")
+        self.rules_button = pn.widgets.Button(name="", icon="info-circle", width=10, button_type="light")
 
 
 
@@ -132,7 +132,7 @@ class SLEGOApp:
     def create_layout(self):
         widget_input = pn.Column(pn.layout.Divider(height=10, margin=(5)), self.widget_tab)
         widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text, self.ontology_btn)
-        widget_updownload = pn.Column(pn.Row(self.file_view, self.file_download), self.file_input, pn.Row(self.file_upload, self.file_delete), self.rules_button, height=150)
+        widget_updownload = pn.Column(pn.Row(self.file_view, self.file_download), pn.Row(self.file_input, self.rules_button), pn.Row(self.file_upload, self.file_delete), height=150, width=250)
         widget_files = pn.Column(self.folder_select, pn.Row(self.file_text, self.filefolder_confirm_btn, height=55), self.file_table, widget_updownload, width=250, margin=(0,20,0,0))
         widget_funcsel = pn.Column(self.funcfilecombo, self.funccombo, self.compute_btn, widget_btns)
         widget_recom = pn.Row(self.recommendation_btn, self.recomAPI_text)
@@ -248,7 +248,7 @@ class SLEGOApp:
             flag, message = function_validation_result(temp_file_path)
 
             if flag is False:
-                self.output_text.value = "File Upload Fail due to validation error\n" + message
+                self.output_text.value = "\n\n##################File Upload Fail due to validation error##################\n\n" + message
             else:
                 self.output_text.value = f'Uploading {filename}...'
                 folder = self.folder_path + '/' + self.file_text.value
