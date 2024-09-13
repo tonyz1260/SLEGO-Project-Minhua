@@ -31,6 +31,9 @@ import kglab
 from pyvis.network import Network
 from rdflib import URIRef
 
+# Import recommender module
+import recommender as rc
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -77,9 +80,11 @@ class SLEGOApp:
 
         self.funcfilecombo = pn.widgets.MultiChoice(
             name='Select Modules',
-            value=self.py_files,  # Pre-select all available .py files
+            value=['util.py', 'func_data_preprocss.py', 'func_yfinance.py', 'llm.py',
+                   'func_viz.py', 'func_eda.py', 'func_uci_dataset.py', 'webscrape.py',
+                   'func_arxiv.py', 'func_backtest.py', 'func_autogluon.py'],
             options=self.py_files,
-            height=150
+            height=80  # Adjusted height to match previous code
         )
         self.compute_btn = pn.widgets.Button(name='Compute', height=50, button_type='primary')
         self.savepipe_btn = pn.widgets.Button(name='Save Pipeline', height=35)
@@ -90,20 +95,24 @@ class SLEGOApp:
         self.progress_text = pn.widgets.TextAreaInput(value='', placeholder='Input your analytics query here', name='User query inputs for recommendation or SPARQL:', height=150)
         self.output_text = pn.widgets.TextAreaInput(value='', placeholder='Results will be shown here', name='System output message:')
 
+        # Added missing widgets with specified heights
+        self.recommendation_btn = pn.widgets.Button(name='Get Recommendation', height=35, button_type='success')
+        self.recomAPI_text = pn.widgets.TextInput(value='', placeholder='Your AI API key', height=35)
+
         # File management widgets
         self.folder_select = pn.widgets.Select(
             name='Select Folder',
-            options=[item for item in os.listdir(self.folder_path) if os.path.isdir(os.path.join(self.folder_path, item))],
+            options=[item for item in os.listdir(self.folder_path) if os.path.isdir(os.path.join(self.folder_path, item))] + ['/'],
             value='dataspace',
             height=50
         )
-        self.file_text = pn.widgets.TextInput(value='/dataspace', placeholder='Input the file name')
-        self.filefolder_confirm_btn = pn.widgets.Button(name='Confirm')
-        self.file_view = pn.widgets.Button(name='View')
-        self.file_download = pn.widgets.Button(name='Download')
-        self.file_upload = pn.widgets.Button(name='Upload')
-        self.file_input = pn.widgets.FileInput(name='Upload file')
-        self.file_delete = pn.widgets.Button(name='Delete')
+        self.file_text = pn.widgets.TextInput(value='/dataspace', placeholder='Input the file name', height=35)
+        self.filefolder_confirm_btn = pn.widgets.Button(name='Confirm', height=35)
+        self.file_view = pn.widgets.Button(name='View', height=35)
+        self.file_download = pn.widgets.Button(name='Download' , height=35)
+        self.file_upload = pn.widgets.Button(name='Upload', height=35)
+        self.file_input = pn.widgets.FileInput(name='Upload file', height=35)
+        self.file_delete = pn.widgets.Button(name='Delete', height=35)
         self.file_table = self.create_file_table()
 
         self.widget_tab = pn.Tabs(('JSON Input', self.json_editor), ('Text Input', self.input_text))
@@ -164,7 +173,7 @@ class SLEGOApp:
         logger.info(f"Selected folder path: {selected_folder_path}")
         if os.path.exists(selected_folder_path):
             file_list = os.listdir(selected_folder_path)
-            df_file = pd.DataFrame(file_list, columns=['Files'])
+            df_file = pd.DataFrame(file_list, columns=['Filter Files :'])
             logger.info(f"Files in {selected_folder_path}: {file_list}")
             return pn.widgets.Tabulator(df_file, header_filters=True, show_index=False)
         else:
@@ -187,11 +196,14 @@ class SLEGOApp:
         self.file_delete.on_click(self.on_file_buttons_click)
         self.folder_select.param.watch(self.folder_select_changed, 'value')
         self.ontology_btn.on_click(self.ontology_btn_click)
+
+        # Added event handler for recommendation button
+        self.recommendation_btn.param.watch(self.recommendation_btn_clicked, 'value')
         logger.info("Event handlers set up.")
 
     def create_layout(self):
         logger.info("Creating layout...")
-        widget_input = pn.Column(pn.layout.Divider(), self.widget_tab)
+        widget_input = pn.Column(pn.layout.Divider(height=10, margin=(10)), self.widget_tab)
         widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text, self.ontology_btn)
         widget_updownload = pn.Column(
             pn.Row(self.file_view, self.file_download),
@@ -200,17 +212,24 @@ class SLEGOApp:
         )
         widget_files = pn.Column(
             self.folder_select,
+
             pn.Row(self.file_text, self.filefolder_confirm_btn),
+            pn.layout.Divider(height=10, margin=(10)),
             self.file_table,
             widget_updownload,
-            width=250,
-            margin=(0, 20, 0, 0)
+
+            width=300, scroll= True
+    
         )
-        widget_funcsel = pn.Column(self.funcfilecombo, self.funccombo, self.compute_btn, widget_btns)
+        widget_funcsel = pn.Column(self.funcfilecombo, self.funccombo, self.compute_btn, widget_btns,min_width=300 )
+
+        # Added recommendation widgets to the layout
+        widget_recom = pn.Row(self.recommendation_btn, self.recomAPI_text)
         self.app = pn.Row(
             widget_files,
-            pn.Column(widget_funcsel, widget_input),
-            pn.Column(self.progress_text, pn.layout.Divider(), self.output_text)
+            pn.Column(widget_funcsel, widget_input,  min_width=600, scroll= True),
+            pn.Column(widget_recom, self.progress_text, pn.layout.Divider(height=10, margin=(10)), self.output_text), 
+            min_width=600, scroll= True
         )
         logger.info("Layout created.")
 
@@ -260,6 +279,36 @@ class SLEGOApp:
         text = json.dumps(self.json_editor.value, indent=4)
         self.input_text.value = text
 
+    def recommendation_btn_clicked(self, event):
+        logger.info("Recommendation button clicked.")
+        self.output_text.value = 'Asking AI for recommendation: \n'
+        user_pipeline = self.json_editor.value
+        user_query = self.progress_text.value
+        db_path = os.path.join(self.folder_path, 'KB.db')
+        openai_api_key = self.recomAPI_text.value
+
+        try:
+            response_text = rc.pipeline_recommendation(db_path, user_query, user_pipeline, openai_api_key)
+            self.output_text.value += response_text
+            self.output_text.value += '\n\n=================================\n'
+            response_text = rc.pipeline_parameters_recommendation(user_query, response_text, openai_api_key)
+
+            text = str(response_text)
+            text = re.sub(r"\b(false|False)\b", '"false"', text, flags=re.IGNORECASE)
+
+            self.output_text.value += response_text
+
+            services = json.loads(response_text)
+            keys = list(services.keys())
+            self.funccombo.value = keys
+
+            rec_string = json.dumps(services, indent=4)
+            self.json_editor.value = services
+            logger.info("Recommendation process completed.")
+        except Exception as e:
+            self.output_text.value += f"\nError during recommendation: {e}"
+            logger.error(f"Error during recommendation: {e}")
+
     def compute_btn_clicked(self, event):
         logger.info("Compute button clicked.")
         self.progress_text.value = 'Computing...'
@@ -306,7 +355,7 @@ class SLEGOApp:
     def on_file_buttons_click(self, event):
         logger.info(f"File button '{event.obj.name}' clicked.")
         self.output_text.value = ''
-        file_list = self.file_table.selected_dataframe['Files'].tolist()
+        file_list = self.file_table.selected_dataframe['Filter Files :'].tolist()
         if file_list:
             if event.obj.name == 'View':
                 for filename in file_list:
@@ -331,7 +380,7 @@ class SLEGOApp:
         selected_folder_path = os.path.join(self.folder_path, self.file_text.value.lstrip('/'))
         if os.path.exists(selected_folder_path):
             file_list = os.listdir(selected_folder_path)
-            df_file = pd.DataFrame(file_list, columns=['Files'])
+            df_file = pd.DataFrame(file_list, columns=['Filter Files :'])
             self.file_table.value = df_file
             logger.info(f"Updated file table with files from {selected_folder_path}")
         else:
@@ -381,7 +430,7 @@ class SLEGOApp:
         selected_folder_path = os.path.join(self.folder_path, self.file_text.value.lstrip('/'))
         if os.path.exists(selected_folder_path):
             file_list = os.listdir(selected_folder_path)
-            df_file = pd.DataFrame(file_list, columns=['Files'])
+            df_file = pd.DataFrame(file_list, columns=['Filter Files :'])
             self.file_table.value = df_file
         else:
             self.file_table.value = pd.DataFrame()
@@ -408,31 +457,94 @@ class SLEGOApp:
         logger.info("Ontology button clicked.")
         input_file_path = os.path.join(self.ontologyspace, "hfd.ttl")
         output_file_path = os.path.join(self.ontologyspace, "hfd_visualization.html")
-        rdf_html_path = self.visualize_rdf_graph(input_file_path, output_file_path)
+        self.visualize_rdf_graph(input_file_path, output_file_path)
 
-        if os.path.exists(rdf_html_path):
+        if os.path.exists(output_file_path):
             if self.is_colab_runtime():
                 from IPython.display import IFrame, display
-                display(IFrame(src=rdf_html_path, width='100%', height='600px'))
+                display(IFrame(src=output_file_path, width='100%', height='600px'))
             else:
                 import webbrowser
-                webbrowser.open_new_tab(f'file://{os.path.abspath(rdf_html_path)}')
+                webbrowser.open_new_tab(f'file://{os.path.abspath(output_file_path)}')
         else:
-            logger.error(f"The file {rdf_html_path} does not exist.")
+            logger.error(f"The file {output_file_path} does not exist.")
 
     def visualize_rdf_graph(self, input_file_path, output_file_path):
         logger.info("Visualizing RDF graph...")
         try:
             kg = kglab.KnowledgeGraph()
             kg.load_rdf(input_file_path)
-            net = Network(notebook=True, height="1000px", width="100%", bgcolor="#ffffff", font_color="black")
-            net.from_nx(kg.get_nx_graph())
+            net = Network(
+                notebook=True, height="1000px", width="100%",
+                bgcolor="#ffffff", font_color="black",
+                directed=True, cdn_resources='remote'
+            )
+
+            # Define visualization options and styles as per your previous code
+            net.set_options("""
+            var options = {
+                "nodes": {
+                    "shape": "box",
+                    "size": 30,
+                    "font": {
+                        "size": 14,
+                        "face": "Tahoma"
+                    }
+                },
+                "edges": {
+                    "arrows": {
+                        "to": {
+                            "enabled": true,
+                            "scaleFactor": 1
+                        }
+                    },
+                    "smooth": {
+                        "type": "continuous"
+                    }
+                },
+                "layout": {
+                    "hierarchical": {
+                        "enabled": true,
+                        "levelSeparation": 250,
+                        "nodeSpacing": 200,
+                        "treeSpacing": 300,
+                        "blockShifting": true,
+                        "edgeMinimization": true,
+                        "parentCentralization": true,
+                        "direction": "LR",
+                        "sortMethod": "hubsize"
+                    }
+                },
+                "physics": {
+                    "enabled": false
+                }
+            }
+            """)
+
+            for subject, predicate, obj in kg.rdf_graph().triples((None, None, None)):
+                if isinstance(subject, URIRef):
+                    self.__add_node(net, kg, subject)
+                if isinstance(obj, URIRef):
+                    self.__add_node(net, kg, obj)
+                if isinstance(predicate, URIRef):
+                    edge_label = predicate.split("/")[-1]
+                    net.add_edge(str(subject), str(obj), label=edge_label)
+
             net.save_graph(output_file_path)
             logger.info(f"RDF graph saved to {output_file_path}")
-            return output_file_path
         except Exception as e:
             logger.error(f"Error visualizing RDF graph: {e}")
             self.output_text.value += f"\nError visualizing RDF graph: {e}"
+
+    def __add_node(self, net, kg, node):
+        label = node.split("/")[-1]
+        node_class = kg.rdf_graph().value(node, URIRef("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"))
+        if node_class:
+            class_name = node_class.split("/")[-1]
+            style = {"color": "gray", "shape": "ellipse", "size": 10}
+        else:
+            style = {"color": "gray", "shape": "ellipse", "size": 10}
+        net.add_node(str(node), label=label, color=style["color"], shape=style["shape"], size=style["size"])
 
     def run(self):
         logger.info("Running the app...")
