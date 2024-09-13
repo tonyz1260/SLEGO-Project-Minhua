@@ -11,7 +11,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Database files
-*.db
+# *.db
 
 # Models directory (if generated during execution)
 slegospace/AutogluonModels/
