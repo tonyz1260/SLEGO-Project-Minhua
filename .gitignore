@@ -1,0 +1,35 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Database files
+*.db
+
+# Models directory (if generated during execution)
+slegospace/AutogluonModels/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Ignore specific data folders if they are generated or shouldn't be tracked
+slegospace/dataspace/
+slegospace/recordspace/
+
+# Environment setup files
+environment_setup.py
+
+# Ignore legacy files
+SLEGO_Legacy.ipynb
+
+# IDE specific files (e.g. VSCode)
+.vscode/
