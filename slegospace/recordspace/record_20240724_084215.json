@@ -1,8 +1,0 @@
-{
-     "import_marketdata_yahoo_csv": {
-          "ticker": "msft",
-          "start_date": "2023-07-25",
-          "end_date": "2024-07-24",
-          "output_file_path": "dataspace/dataset.csv"
-     }
-}

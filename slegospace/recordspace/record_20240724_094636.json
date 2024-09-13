@@ -1,7 +1,0 @@
-{
-     "autogluon_model_predict": {
-          "pickle_path": "dataspace/autogluon_model.pkl",
-          "input_data_path": "dataspace/test.csv",
-          "output_data_path": "dataspace/autogluon_predict.csv"
-     }
-}
