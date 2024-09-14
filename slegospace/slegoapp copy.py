@@ -51,6 +51,7 @@ class SLEGOApp:
         self.recordspace = config['recordspace']
         self.knowledgespace = config['knowledgespace']
         self.ontologyspace = config['ontologyspace']
+        self.func_file_path = os.path.join(os.getcwd(), 'func.py')
 
         # Log configuration paths
         logger.info(f"Configuration paths:")
@@ -74,94 +75,96 @@ class SLEGOApp:
             os.makedirs(self.functionspace)
             logger.info(f"Created functionspace directory: {self.functionspace}")
 
-        # Include all .py files in the functionspace directory
-        self.py_files = [f for f in os.listdir(self.functionspace) if f.endswith('.py')]
+        self.py_files = [file for file in os.listdir(self.functionspace) if file.endswith('.py')]
+        logger.info(f"Python files found in functionspace: {self.py_files}")
 
-        if not self.py_files:
-            logger.warning("No .py modules found in the functionspace.")
-        else:
-            logger.info(f"Python files available for selection: {self.py_files}")
-
-        # Set default selected modules
-        default_modules = ['func_vix.py', 'func_yfinance.py']
-        default_selected = [module for module in default_modules if module in self.py_files]
         self.funcfilecombo = pn.widgets.MultiChoice(
-            name='Select Module(s)',
-            value=default_selected,
-            options=self.py_files,
-            height=100
-        )
-    # ... rest of the method remains the same ...
+            name='Select Modules',
+            value=['func_yfinance.py'],
 
+            options=self.py_files,
+            height=80  # Adjusted height to match previous code
+        )
         self.compute_btn = pn.widgets.Button(name='Compute', height=50, button_type='primary')
         self.savepipe_btn = pn.widgets.Button(name='Save Pipeline', height=35)
         self.pipeline_text = pn.widgets.TextInput(value='', placeholder='Input Pipeline Name', height=35)
         self.json_toggle = pn.widgets.Toggle(name='Input mode: text or form', height=35, button_type='warning')
         self.json_editor = pn.widgets.JSONEditor(value={}, mode='form')
         self.input_text = pn.widgets.TextAreaInput(value='', placeholder='Input the parameters')
-        self.progress_text = pn.widgets.TextAreaInput(
-            value='', 
-            placeholder='Input your analytics query here', 
-            name='User query inputs for recommendation or SPARQL:', 
-            height=150
-        )
-        self.output_text = pn.widgets.TextAreaInput(
-            value='', 
-            placeholder='Results will be shown here', 
-            name='System output message:'
-        )
+        self.progress_text = pn.widgets.TextAreaInput(value='', placeholder='Input your analytics query here', name='User query inputs for recommendation or SPARQL:', height=150)
+        self.output_text = pn.widgets.TextAreaInput(value='', placeholder='Results will be shown here', name='System output message:')
 
         # Added missing widgets with specified heights
-        self.recommendation_btn = pn.widgets.Button(
-            name='Get Recommendation', 
-            height=35, 
-            button_type='success'
-        )
-        self.recomAPI_text = pn.widgets.TextInput(
-            value='', 
-            placeholder='Your AI API key', 
-            height=35
-        )
+        self.recommendation_btn = pn.widgets.Button(name='Get Recommendation', height=35, button_type='success')
+        self.recomAPI_text = pn.widgets.TextInput(value='', placeholder='Your AI API key', height=35)
 
         # File management widgets
         self.folder_select = pn.widgets.Select(
             name='Select Folder',
-            options=[item for item in os.listdir(self.folder_path) 
-                     if os.path.isdir(os.path.join(self.folder_path, item))] + ['/'],
+            options=[item for item in os.listdir(self.folder_path) if os.path.isdir(os.path.join(self.folder_path, item))] + ['/'],
             value='dataspace',
             height=50
         )
-        self.file_text = pn.widgets.TextInput(
-            value='/dataspace', 
-            placeholder='Input the file name', 
-            height=35
-        )
+        self.file_text = pn.widgets.TextInput(value='/dataspace', placeholder='Input the file name', height=35)
         self.filefolder_confirm_btn = pn.widgets.Button(name='Confirm', height=35)
         self.file_view = pn.widgets.Button(name='View', height=35)
-        self.file_download = pn.widgets.Button(name='Download', height=35)
+        self.file_download = pn.widgets.Button(name='Download' , height=35)
         self.file_upload = pn.widgets.Button(name='Upload', height=35)
         self.file_input = pn.widgets.FileInput(name='Upload file', height=35)
         self.file_delete = pn.widgets.Button(name='Delete', height=35)
         self.file_table = self.create_file_table()
 
-        self.widget_tab = pn.Tabs(
-            ('JSON Input', self.json_editor), 
-            ('Text Input', self.input_text)
-        )
+        self.widget_tab = pn.Tabs(('JSON Input', self.json_editor), ('Text Input', self.input_text))
         self.ontology_btn = pn.widgets.Button(name='Show Ontology', height=35)
-
-        # Placeholder for funccombo
-        self.funccombo_pane = pn.Column()
         logger.info("Widgets initialized.")
 
     def setup_func_module(self):
         logger.info("Setting up func module...")
-        selected_modules = self.funcfilecombo.value  # Get the selected modules
-        if not selected_modules:
-            logger.error("No modules selected. Please ensure desired modules exist in the functionspace.")
-            return
+        self.delete_func_file()
+        self.create_func_file()
 
-        self.update_func_module(selected_modules)
+        # Ensure the directory containing func.py is in sys.path
+        func_dir = os.path.abspath(os.path.dirname(self.func_file_path))
+        if func_dir not in sys.path:
+            sys.path.insert(0, func_dir)
+            logger.info(f"Added {func_dir} to sys.path.")
+
+        try:
+            import func
+            importlib.reload(func)
+            self.func = func
+            logger.info("func module imported and reloaded successfully.")
+        except Exception as e:
+            logger.error(f"Error importing func module: {e}")
+            raise
+
+        self.funccombo = self.create_multi_select_combobox(self.func)
+        logger.info("func module set up.")
+
+    def delete_func_file(self):
+        if os.path.exists(self.func_file_path):
+            try:
+                os.remove(self.func_file_path)
+                logger.info(f"Deleted existing {self.func_file_path}.")
+            except Exception as e:
+                logger.error(f"Error deleting {self.func_file_path}: {e}")
+
+    def create_func_file(self):
+        logger.info(f"Creating {self.func_file_path}...")
+        try:
+            with open(self.func_file_path, 'w') as func_file:
+                for py_file in self.funcfilecombo.value:
+                    file_path = os.path.join(self.functionspace, py_file)
+                    logger.info(f"Adding contents of {file_path} to {self.func_file_path}.")
+                    if os.path.exists(file_path):
+                        with open(file_path, 'r') as file:
+                            func_file.write(file.read() + '\n')
+                    else:
+                        logger.warning(f"File {file_path} does not exist.")
+            logger.info(f"{self.func_file_path} created.")
+        except Exception as e:
+            logger.error(f"Error creating {self.func_file_path}: {e}")
+            raise
 
     def create_file_table(self):
         logger.info("Creating file table...")
@@ -179,9 +182,7 @@ class SLEGOApp:
     def setup_event_handlers(self):
         logger.info("Setting up event handlers...")
         self.funcfilecombo.param.watch(self.funcfilecombo_change, 'value')
-        # Remove old funccombo watcher if it exists
-        if hasattr(self, 'funccombo'):
-            self.funccombo.param.watch(self.funccombo_change, 'value')
+        self.funccombo.param.watch(self.funccombo_change, 'value')
         self.input_text.param.watch(self.input_text_change, 'value')
         self.json_toggle.param.watch(self.json_toggle_clicked, 'value')
         self.json_editor.param.watch(self.json_editor_change, 'value')
@@ -196,15 +197,12 @@ class SLEGOApp:
         self.ontology_btn.on_click(self.ontology_btn_click)
 
         # Added event handler for recommendation button
-        self.recommendation_btn.on_click(self.recommendation_btn_clicked)
+        self.recommendation_btn.param.watch(self.recommendation_btn_clicked, 'value')
         logger.info("Event handlers set up.")
 
     def create_layout(self):
         logger.info("Creating layout...")
-        widget_input = pn.Column(
-            pn.layout.Divider(height=10, margin=(10)), 
-            self.widget_tab
-        )
+        widget_input = pn.Column(pn.layout.Divider(height=10, margin=(10)), self.widget_tab)
         widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text, self.ontology_btn)
         widget_updownload = pn.Column(
             pn.Row(self.file_view, self.file_download),
@@ -213,82 +211,30 @@ class SLEGOApp:
         )
         widget_files = pn.Column(
             self.folder_select,
+
             pn.Row(self.file_text, self.filefolder_confirm_btn),
             pn.layout.Divider(height=10, margin=(10)),
             self.file_table,
             widget_updownload,
-            width=300, scroll=True
+
+            width=300, scroll= True
+    
         )
-        widget_funcsel = pn.Column(
-            self.funcfilecombo, 
-            self.funccombo_pane,  # Use the placeholder here
-            self.compute_btn, 
-            widget_btns,
-            min_width=300
-        )
+        widget_funcsel = pn.Column(self.funcfilecombo, self.funccombo, self.compute_btn, widget_btns,min_width=300 )
 
         # Added recommendation widgets to the layout
         widget_recom = pn.Row(self.recommendation_btn, self.recomAPI_text)
         self.app = pn.Row(
             widget_files,
-            pn.Column(widget_funcsel, widget_input, min_width=600, scroll=True),
-            pn.Column(
-                widget_recom, 
-                self.progress_text, 
-                pn.layout.Divider(height=10, margin=(10)), 
-                self.output_text
-            ), 
-            min_width=600, scroll=True
+            pn.Column(widget_funcsel, widget_input,  min_width=600, scroll= True),
+            pn.Column(widget_recom, self.progress_text, pn.layout.Divider(height=10, margin=(10)), self.output_text), 
+            min_width=600, scroll= True
         )
         logger.info("Layout created.")
 
     def funcfilecombo_change(self, event):
         logger.info(f"funcfilecombo changed: {event.new}")
-        selected_modules = event.new
-        self.update_func_module(selected_modules)
-
-    def update_func_module(self, module_names):
-        logger.info(f"Updating functions for selected modules: {module_names}")
-        if not module_names:
-            self.funccombo_pane.objects = []
-            self.output_text.value = "No modules selected."
-            return
-
-        self.modules = {}
-        self.funcs = {}
-
-        # Import selected modules dynamically
-        for module_name in module_names:
-            module_path = os.path.join(self.functionspace, module_name)
-            if not os.path.exists(module_path):
-                logger.warning(f"Module file {module_path} does not exist.")
-                continue
-
-            # Dynamically import the module
-            spec = importlib.util.spec_from_file_location(module_name[:-3], module_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            self.modules[module_name] = module
-
-            # Get functions from the module
-            module_functions = self.get_functions_from_module(module, module_name)
-            self.funcs.update(module_functions)
-
-        # Update function combo box
-        self.funccombo = self.create_multi_select_combobox(self.funcs)
-        self.funccombo_pane.objects = [self.funccombo]
-        # Set up event handler for the new funccombo
-        self.funccombo.param.watch(self.funccombo_change, 'value')
-        logger.info("Function combobox updated based on the selected modules.")
-
-
-    def get_functions_from_module(self, module, module_name):
-        functions = {}
-        for name, obj in inspect.getmembers(module, inspect.isfunction):
-            if obj.__module__ == module.__name__ and not name.startswith('_'):
-                func_key = f"{module_name[:-3]}.{name}"
-                functions[func_key] = obj
-        return functions
+        self.setup_func_module()
 
     def funccombo_change(self, event):
         logger.info(f"funccombo changed: {event.new}")
@@ -296,13 +242,12 @@ class SLEGOApp:
         list_funcs = self.funccombo.value
         logger.info(f"Selected functions: {list_funcs}")
         list_params = []
-        for func_key in list_funcs:
+        for func_name in list_funcs:
             try:
-                func = self.funcs[func_key]
-                params = self.extract_parameter(func)
+                params = self.extract_parameter(getattr(self.func, func_name))
                 list_params.append(params)
             except Exception as e:
-                logger.error(f"Error extracting parameters for function {func_key}: {e}")
+                logger.error(f"Error extracting parameters for function {func_name}: {e}")
                 list_params.append({})
         funcs_params = dict(zip(list_funcs, list_params))
         formatted_data = json.dumps(funcs_params, indent=4)
@@ -370,24 +315,24 @@ class SLEGOApp:
         self.output_text.value = ''
         logger.info(f"Pipeline dict: {pipeline_dict}")
 
-        for func_key, parameters in pipeline_dict.items():
-            logger.info(f"Computing {func_key} with parameters {parameters}")
-            self.progress_text.value = f'Computing {func_key}...'
+        for function_name, parameters in pipeline_dict.items():
+            logger.info(f"Computing {function_name} with parameters {parameters}")
+            self.progress_text.value = f'Computing {function_name}...'
             try:
                 start_time = time.time()
-                function = self.funcs[func_key]
+                function = getattr(self.func, function_name)
                 result = function(**parameters)
                 result_string = str(result)
                 compute_time = time.time() - start_time
 
-                self.output_text.value += f"\n===== {func_key} =====\n\n"
+                self.output_text.value += f"\n===== {function_name} =====\n\n"
                 self.output_text.value += f"Function computation time: {compute_time:.4f} seconds\n\n"
-                self.output_text.value += (result_string[:1000] + '... [truncated]') if len(result_string) > 1000 else result_string
-                logger.info(f"Function {func_key} computed successfully.")
+                self.output_text.value += result_string[:1000] + '... [truncated]' if len(result_string) > 1000 else result_string
+                logger.info(f"Function {function_name} computed successfully.")
             except Exception as e:
-                self.output_text.value += f"\n===== {func_key} =====\n\n"
+                self.output_text.value += f"\n===== {function_name} =====\n\n"
                 self.output_text.value += f"Error occurred: {str(e)}\n"
-                logger.error(f"Error computing {func_key}: {e}")
+                logger.error(f"Error computing {function_name}: {e}")
 
         self.save_record('recordspace', pipeline_dict)
         self.progress_text.value = 'Done!'
@@ -449,11 +394,10 @@ class SLEGOApp:
     def get_doc_string(self, pipeline_text):
         output = ''
         data = json.loads(pipeline_text)
-        for func_key in data.keys():
-            output += f"===== {func_key} =====\n"
+        for func_name in data.keys():
+            output += f"===== {func_name} =====\n"
             try:
-                func = self.funcs[func_key]
-                doc = func.__doc__
+                doc = getattr(self.func, func_name).__doc__
                 output += doc if doc else 'No docstring available.\n'
             except AttributeError:
                 output += 'Function not found.\n'
@@ -490,9 +434,11 @@ class SLEGOApp:
         else:
             self.file_table.value = pd.DataFrame()
 
-    def create_multi_select_combobox(self, funcs):
-        options = list(funcs.keys())
-        multi_combobox = pn.widgets.MultiChoice(name='Functions:', options=options, height=150)
+    def create_multi_select_combobox(self, target_module):
+        module_name = target_module.__name__
+        functions = [name for name, obj in inspect.getmembers(target_module, inspect.isfunction)
+                     if obj.__module__ == module_name and not name.startswith('_')]
+        multi_combobox = pn.widgets.MultiChoice(name='Functions:', options=functions, height=150)
         return multi_combobox
 
     def extract_parameter(self, func):
@@ -597,13 +543,7 @@ class SLEGOApp:
             style = {"color": "gray", "shape": "ellipse", "size": 10}
         else:
             style = {"color": "gray", "shape": "ellipse", "size": 10}
-        net.add_node(
-            str(node), 
-            label=label, 
-            color=style["color"], 
-            shape=style["shape"], 
-            size=style["size"]
-        )
+        net.add_node(str(node), label=label, color=style["color"], shape=style["shape"], size=style["size"])
 
     def run(self):
         logger.info("Running the app...")
@@ -623,3 +563,20 @@ class SLEGOApp:
     @staticmethod
     def is_colab_runtime():
         return 'google.colab' in sys.modules
+
+# At the end of your script, ensure that you have the following code to run the app:
+
+# if __name__ == '__main__':
+#     # Define your configuration dictionary
+#     config = {
+#         'folder_path': '/path/to/your/slegospace',  # Replace with your actual path
+#         'functionspace': '/path/to/your/functionspace',
+#         'dataspace': '/path/to/your/dataspace',
+#         'recordspace': '/path/to/your/recordspace',
+#         'knowledgespace': '/path/to/your/knowledgespace',
+#         'ontologyspace': '/path/to/your/ontologyspace',
+#     }
+
+#     # Create and run the app
+#     slego_app = SLEGOApp(config)
+#     slego_app.run()
