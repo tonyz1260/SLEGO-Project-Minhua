@@ -19,3 +19,5 @@ kglab
 rdflib
 pyvis
 prophet
+keras
+tensorflow
