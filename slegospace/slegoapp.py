@@ -258,11 +258,11 @@ class SLEGOApp:
                 if os.path.exists(file_path):
                     filename = datetime.now().strftime("%Y%m%d_%H%M%S_") + filename
                     file_path = folder + '/' + filename
-                    self.output_text.value = f'File with the same name already exists. Renaming to {filename}...'
+                    self.output_text.value += f'File with the same name already exists. Renaming to {filename}...'
 
                 with open(file_path, 'wb') as f:
                     f.write(file_content)
-                self.output_text.value = f'{filename} uploaded successfully!'
+                self.output_text.value += f'\n\n##################{filename} uploaded successfully!##############\n\n' + message
                 self.refresh_file_table()
 
             os.remove(temp_file_path)

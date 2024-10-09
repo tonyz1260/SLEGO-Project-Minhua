@@ -1,7 +1,7 @@
 import inspect
 import importlib.util
 import ast
-from typing import Callable
+from typing import Callable, List
 from config import *
 import func
 
@@ -49,16 +49,21 @@ def api_call(prompt):
 
     return reply
 
-def correction_proposal_gpt(name, obj, issue_type, issue_message):
+def correction_proposal_gpt(name, obj, validation_result: List[ValidationResult]):
     prompt = "You are now a software engineer and your task is to propose a potential correction for the function that is provided to you. \
     You are given a function that is written in Python and the function contains certain issues that need to be corrected. \
-    Based on the issue type and message that is provided, you need to propose a potential correction for the function. \
+    Based on the issue types and messages that are provided, you need to propose potential corrections for the functions. \
     You will be provided with the function source code and the issue type and message that you need to address. \
-    Your final return response should include the proposed correction for the function and must be concise (less than 15 words ideally). \
+    Your final return response should be the function that contains no issue with the potential fix applied so that the user can just copy and paste directly. \
     You must not add any additional text or characters to the response. From here, I will provide you with the function source code and the issue type and message that you need to address."
 
     prompt += f"\n\nFunction: {name}\nSource Code: {inspect.getsource(obj)}\n"
-    prompt += f"\n\nIssue Type: {issue_type}\nIssue Message: {issue_message}\n"
+    for result in validation_result:
+        prompt += f"\n\nIssue Type: {result.issue_type}\nMessage: {result.message}\n"
+
+    prompt += "\n\nFor your reference, these issue messages are generated based on the following pre-defined rules, "
+    for rule in validation_rules:
+        prompt += f"\nDescription: {rule.description}\nIssue Type: {rule.issue_type}\n"
 
     response = api_call(prompt)
 
@@ -208,7 +213,8 @@ def insert_validation_rule_in_place(rules, new_rule, new_priority):
 
 
 def validate_func(module):
-    validate_result = []
+    final_validate_result = {}
+    all_proposed_correction = {}
 
     for name, obj in inspect.getmembers(module):
         if inspect.isfunction(obj) and obj.__module__ == module.__name__:
@@ -218,25 +224,30 @@ def validate_func(module):
             # print(f'Annotations: {obj.__annotations__}')
             print()
 
+            validate_result = []
+
             for validation_model in validation_rules:
                 result = validation_model.function(name, obj)
 
                 if isinstance(result, list):
                     for res in result:
-                        if res.get_result() is False and res.issue_type == 'ERROR':
-                            correction = correction_proposal_gpt(name, obj, res.issue_type, res.message)
-                            print(correction)
-                            res = ValidationResult(name, False, f'{res.message}\nProposed Correction: {correction}', 'ERROR')
                         validate_result.append(res)
                 else:
-                    # for error type, if the result is False, then propose a correction
-                    if result.get_result() is False and result.issue_type == 'ERROR':
-                        correction = correction_proposal_gpt(name, obj, result.issue_type, result.message)
-                        print(correction)
-                        result = ValidationResult(name, False, f'{result.message}\nProposed Correction: {correction}', 'ERROR')
                     validate_result.append(result)
+            
+            final_validate_result[name] = validate_result
+
+            correction_needed = False
+
+            for result in validate_result:
+                if result.get_result() is False and result.issue_type == 'ERROR':
+                    correction_needed = True
+                
+            if correction_needed:
+                correction = correction_proposal_gpt(name, obj, validate_result)
+                all_proposed_correction[name] = correction
     
-    return validate_result
+    return final_validate_result, all_proposed_correction
 
 def load_module(file_path):
     spec = importlib.util.spec_from_file_location('module', file_path)
@@ -247,20 +258,24 @@ def load_module(file_path):
 def function_validation_result(file_path):
     module = load_module(file_path)
 
-    validation_result = validate_func(module)
+    validation_result, proposed_correction = validate_func(module)
     flag = True
     message, error_message, warning_message = "", "", ""
-    for result in validation_result:
-        if result.get_result() is False:
-            if result.issue_type == 'ERROR':
-                flag = False
+    for _, results in validation_result.items():
+        for result in results:
+            if result.issue_type == 'ERROR' and result.validation_result == False:
                 error_message += str(result)
+                flag = False
             elif result.issue_type == 'WARNING':
                 warning_message += str(result)
-    message = error_message + "\n" + warning_message
+    
+    message += error_message + "\n" + warning_message + "\n\n"
+
+    for name, correction in proposed_correction.items():
+        message += f'Function: {name}\nProposed Correction: {correction}\n\n'
 
     if flag:
-        message = "All functions are valid"
+        message = "All functions are valid" if warning_message == "" else "Some warning messages that may be useful for further improvements\n\n" + warning_message
     # print(flag, message)
     return flag, message
 
