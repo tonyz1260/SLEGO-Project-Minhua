@@ -38,7 +38,7 @@ def api_call(prompt):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a python programmer and tester."},
+            {"role": "system", "content": "You are an expert-level python programmer and tester."},
             {"role": "user", "content": f"{prompt}"},
         ],
     )
@@ -55,7 +55,9 @@ def correction_proposal_gpt(name, obj, validation_result: List[ValidationResult]
     Based on the issue types and messages that are provided, you need to propose potential corrections for the functions. \
     You will be provided with the function source code and the issue type and message that you need to address. \
     Your final return response should be the function that contains no issue with the potential fix applied so that the user can just copy and paste directly. \
-    You must not add any additional text or characters to the response. From here, I will provide you with the function source code and the issue type and message that you need to address."
+    You must not add any additional text or characters to the response. \
+    You also must not add things like backtick and you must not explicitly declare python as the first line. \
+    From here, I will provide you with the function source code and the issue type and message that you need to address."
 
     prompt += f"\n\nFunction: {name}\nSource Code: {inspect.getsource(obj)}\n"
     for result in validation_result:
@@ -174,6 +176,8 @@ def check_annotations_and_default_values(name, obj):
     else:
         return ValidationResult(name, True, 'Function has annotations and default values', 'ERROR')
 
+# Below doesn't seem to be useful, the bokeh library seems to be auto rejecting any file containing the syntax error
+# Though the error message is not shown on our interface
 def check_syntax_error(name, obj):
     try:
         ast.parse(inspect.getsource(obj))
@@ -268,16 +272,18 @@ def function_validation_result(file_path):
                 flag = False
             elif result.issue_type == 'WARNING':
                 warning_message += str(result)
-    
-    message += error_message + "\n" + warning_message + "\n\n"
 
     for name, correction in proposed_correction.items():
-        message += f'Function: {name}\nProposed Correction: {correction}\n\n'
+        message += f'Function: {name}\nProposed Correction: \n{correction}\n\n'
+
+    message += "----------------------------------------------------------------------------------------------------------------------\n\n"
+    message += "Below are the validation result which may help you to understand the proposed correction and the reasoning.\n\n"
+    message += error_message + "\n" + warning_message + "\n\n"
 
     if flag:
         message = "All functions are valid" if warning_message == "" else "Some warning messages that may be useful for further improvements\n\n" + warning_message
     # print(flag, message)
-    return flag, message
+    return flag, message, proposed_correction
 
 
 # print(function_validation_result('func_api.py'))

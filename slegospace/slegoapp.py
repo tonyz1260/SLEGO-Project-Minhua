@@ -238,6 +238,8 @@ class SLEGOApp:
 
     def file_upload_click(self, event):
         if self.file_input.filename:
+            self.output_text.value = f'Uploading {filename}...'
+
             filename = self.file_input.filename
             file_content = self.file_input.value
 
@@ -245,25 +247,32 @@ class SLEGOApp:
             with open(temp_file_path, 'wb') as f:
                 f.write(file_content)
 
-            flag, message = function_validation_result(temp_file_path)
+            flag, message, proposed_correction = function_validation_result(temp_file_path)
+            
+            folder = self.folder_path + '/' + self.file_text.value
+            file_path = folder + '/' + filename
+
+            # If a file already exists with the same name, add a timestamp to the filename
+            if os.path.exists(file_path):
+                filename = datetime.now().strftime("%Y%m%d_%H%M%S_") + filename
+                file_path = folder + '/' + filename
+                self.output_text.value += f'File with the same name already exists. Renaming to {filename}...'
 
             if flag is False:
-                self.output_text.value = "\n\n##################File Upload Fail due to validation error##################\n\n" + message
+                self.output_text.value = "\n\n##################File Upload Success BUT with modification##################\n\n" + message
+                
+                with open(file_path, 'w') as f:
+                    for _, correction in proposed_correction.items():
+                        f.write(correction)
+                        f.write('\n\n')
+                
             else:
-                self.output_text.value = f'Uploading {filename}...'
-                folder = self.folder_path + '/' + self.file_text.value
-                file_path = folder + '/' + filename
-
-                # If a file already exists with the same name, add a timestamp to the filename
-                if os.path.exists(file_path):
-                    filename = datetime.now().strftime("%Y%m%d_%H%M%S_") + filename
-                    file_path = folder + '/' + filename
-                    self.output_text.value += f'File with the same name already exists. Renaming to {filename}...'
 
                 with open(file_path, 'wb') as f:
                     f.write(file_content)
                 self.output_text.value += f'\n\n##################{filename} uploaded successfully!##############\n\n' + message
-                self.refresh_file_table()
+                
+            self.refresh_file_table()
 
             os.remove(temp_file_path)
         else:
