@@ -7,6 +7,7 @@ import importlib
 import re
 import io
 import time
+import sys
 import param
 from datetime import datetime
 import itertools
@@ -82,16 +83,24 @@ class SLEGOApp:
         self.ontology_btn = pn.widgets.Button(name='Show Ontology', height=35)
         self.rules_popup = pn.Card(pn.pane.Markdown("## Modal Title\nThis is the content inside the modal."), title="Modal", width=80, height=80, header_background="lightgray")
         self.rules_button = pn.widgets.Button(name="", icon="info-circle", width=10, button_type="light")
+        self.funccombo = pn.widgets.MultiChoice(name='Functions:', height=150)
 
 
 
     def setup_func_module(self):
         self.delete_func_file()
         self.create_func_file()
+        
+        # Optionally clear the module from cache
+        if 'func' in sys.modules:
+            del sys.modules['func']
+        
         import func
         importlib.reload(func)
         self.func = func
-        self.funccombo = self.create_multi_select_combobox(self.func)
+        
+        # Update self.funccombo with the new functions
+        self.funccombo.options = self.get_functions_from_module(self.func)
 
     def delete_func_file(self):
         if os.path.exists(self.func_file_path):
@@ -212,14 +221,12 @@ class SLEGOApp:
                 start_time = time.time()
                 function = getattr(self.func, function_name)
                 result = function(**parameters)
-                result_string = str(result)
-                words_iterator = iter(result_string.split())
-                first_x_words = itertools.islice(words_iterator, 500)
+                result_string = self.output_formatting(result)
                 compute_time = time.time() - start_time
 
                 self.output_text.value += f"\n===================={function_name}====================\n\n"
                 self.output_text.value += f"Function computation Time: {compute_time:.4f} seconds\n\n"
-                self.output_text.value += " ".join(first_x_words)
+                self.output_text.value += result_string
             except Exception as e:
                 self.output_text.value += f"\n===================={function_name}====================\n\n"
                 self.output_text.value += f"Error occurred: {str(e)}\n"
@@ -229,12 +236,46 @@ class SLEGOApp:
         self.on_filefolder_confirm_btn_click(None)
         self.refresh_file_table()
 
+    def output_formatting(self, result):
+        max_rows = 10
+        max_words = 500
+        max_chars = 2000
+
+        final = ""
+
+        # Check if the result is a pandas DataFrame
+        if isinstance(result, pd.DataFrame):
+            limited_df = result.head(max_rows)  # Limit to the first max_rows rows
+            df_string = limited_df.to_string(index=False)
+            final = df_string[:max_chars]  # Limit to max_chars characters
+            if len(df_string) > max_chars:
+                final += "\n... (truncated)"
+        
+        # Handle lists or dictionaries
+        elif isinstance(result, (list, dict)):
+            result_string = str(result)
+            final = result_string[:max_chars]  # Limit to max_chars characters
+            if len(result_string) > max_chars:
+                final += "\n... (truncated)"
+
+        else:
+            result_string = str(result)
+            words_iterator = iter(result_string.split())
+            first_x_words = itertools.islice(words_iterator, max_words)
+            truncated_result = " ".join(first_x_words)
+            final = truncated_result[:max_chars]  # Limit to max_chars characters
+            if len(truncated_result) > max_chars:
+                final += "\n... (truncated)"
+
+        return final
+
     def save_pipeline(self, event):
         pipeline_name = self.pipeline_text.value if self.pipeline_text.value else '__'
         text = re.sub(r'\bfalse\b', 'False', self.input_text.value, flags=re.IGNORECASE)
         data = ast.literal_eval(text)
         self.save_record('knowledgespace', data, pipeline_name)
         self.on_filefolder_confirm_btn_click(None)
+        self.output_text.value = f'Pipeline {pipeline_name} saved to knowledgespace!'
 
     def file_upload_click(self, event):
         if self.file_input.filename:
@@ -347,15 +388,15 @@ class SLEGOApp:
         df_file = pd.DataFrame(file_list, columns=['Filter Files :'])
         self.file_table.value = df_file
 
-    def create_multi_select_combobox(self, target_module):
+    def get_functions_from_module(self, target_module):
         """
         Creates a multi-select combobox with all functions from the target_module.
         """
         module_name = target_module.__name__
         functions = [name for name, obj in inspect.getmembers(target_module, inspect.isfunction)
                      if obj.__module__ == module_name and not name.startswith('_')]
-        multi_combobox = pn.widgets.MultiChoice(name='Functions:', options=functions, height=150)
-        return multi_combobox
+        self.output_text.value += f"\nLoaded {len(functions)} functions from {module_name} module.\n"
+        return functions
 
     def extract_parameter(self, func):
         """
