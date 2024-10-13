@@ -55,7 +55,7 @@ class SLEGOApp:
             name='Select Modules',
             value=['util.py', 'func_data_preprocss.py', 'func_yfinance.py', 'llm.py',
                    'func_viz.py', 'func_eda.py', 'func_uci_dataset.py', 'webscrape.py',
-                   'func_arxiv.py', 'func_backtest.py', 'func_autogluon.py'],
+                   'func_arxiv.py', 'func_backtest.py', 'func_autogluon.py', 'Minhua_trial.py'],
             options=self.py_files, height=80
         )
         self.compute_btn = pn.widgets.Button(name='Compute', height=50, button_type='primary')
@@ -309,16 +309,16 @@ class SLEGOApp:
         self.on_filefolder_confirm_btn_click(None)
 
     def get_doc_string(self, pipeline):
-            text = self.input_text.value
-            output = ''
-            data = json.loads(text)
-            for key in data.keys():
-                output += f'#######{str(key)}#######\n'
-                try:
-                    output += getattr(self.func, key).__doc__ + '\n'
-                except AttributeError:
-                    output += 'No docstring found for this function\n'
-            return output
+        text = self.input_text.value
+        output = ''
+        data = json.loads(text)
+        for key in data.keys():
+            output += f'#######{str(key)}#######\n'
+            try:
+                output += getattr(self.func, key).__doc__ + '\n'
+            except AttributeError:
+                output += 'No docstring found for this function\n'
+        return output
 
     @staticmethod
     def is_colab_runtime():

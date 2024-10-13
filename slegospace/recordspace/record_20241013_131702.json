@@ -1,0 +1,14 @@
+{
+     "convert_to_long_format": {
+          "input_file": "dataspace/World_Development_Indicators.csv",
+          "output_file": "dataspace/world_dev_indicator_long.csv",
+          "id_vars": [
+               "Country Name",
+               "Country Code",
+               "Series Name",
+               "Series Code"
+          ],
+          "key_name": "Year",
+          "value_name": "Money"
+     }
+}

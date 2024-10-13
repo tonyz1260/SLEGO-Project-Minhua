@@ -1,0 +1,20 @@
+{
+     "convert_to_long_format": {
+          "input_file": null,
+          "output_file": null,
+          "id_vars": null,
+          "key_name": null,
+          "value_name": null
+     },
+     "convert_to_integer": {
+          "input_file": null,
+          "output_file": null,
+          "columns": null
+     },
+     "filter_by_val": {
+          "input_file": null,
+          "output_file": null,
+          "columns": null,
+          "values": null
+     }
+}
