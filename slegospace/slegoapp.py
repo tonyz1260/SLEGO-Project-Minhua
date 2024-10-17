@@ -43,6 +43,9 @@ class SLEGOApp:
         self.setup_event_handlers()
         self.create_layout()
         self.create_template()
+        self.full_func_mapping_path = 'full_func.json'
+        self.full_func_file_path = 'full_func.py'
+        self.setup_full_func_mapping()
 
     def setup_panel_extensions(self):
         pn.extension()
@@ -101,6 +104,42 @@ class SLEGOApp:
         
         # Update self.funccombo with the new functions
         self.funccombo.options = self.get_functions_from_module(self.func)
+
+    def setup_full_func_mapping(self):
+        if os.path.exists(self.full_func_mapping_path):
+            os.remove(self.full_func_mapping_path)
+
+        if os.path.exists(self.full_func_file_path):
+            os.remove(self.full_func_file_path)
+
+        # Create a full function mapping file
+        # key is the filename and value is a list of functions (name) in the file
+        full_func_mapping = {}
+        for py_file in self.py_files:
+            file_path = os.path.join(self.functionspace, py_file)
+            function_names = self.get_all_func_names(file_path)
+            full_func_mapping[py_file] = function_names
+
+            # also add all functions to the full_func.py file
+            with open(self.full_func_file_path, 'a') as func_file:
+                with open(file_path, 'r') as file:
+                    func_file.write(file.read() + '\n')
+        
+        with open(self.full_func_mapping_path, 'w') as file:
+            json.dump(full_func_mapping, file, indent=4)
+
+
+    def get_all_func_names(self, filepath):
+        with open(filepath, 'r') as file:
+            content = file.read()
+        
+        # Parse the file content into an AST
+        tree = ast.parse(content)
+        
+        # Extract all function definitions (ast.FunctionDef) from the tree
+        function_names = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+    
+        return function_names
 
     def delete_func_file(self):
         if os.path.exists(self.func_file_path):
@@ -279,9 +318,9 @@ class SLEGOApp:
 
     def file_upload_click(self, event):
         if self.file_input.filename:
+            filename = self.file_input.filename
             self.output_text.value = f'Uploading {filename}...'
 
-            filename = self.file_input.filename
             file_content = self.file_input.value
 
             temp_file_path = self.folder_path + '/temp/' + filename

@@ -1,0 +1,104 @@
+{
+    "func_data_preprocss.py": [
+        "df_keep_rows_by_index",
+        "df_keep_columns",
+        "df_delete_columns",
+        "df_rename_columns",
+        "merge_csv_by_index",
+        "prepare_dataset_tabular_ml",
+        "split_dataset_4ml",
+        "df_shift_data_row"
+    ],
+    "func_backtest.py": [
+        "moving_avg_cross_signal",
+        "vbt_sginal_backtest",
+        "backtest_viz_with_quantstats"
+    ],
+    "func_eda.py": [
+        "generate_sweetviz_report"
+    ],
+    "func_arxiv.py": [
+        "download_papers_from_arxiv_csv",
+        "search_arxiv_papers"
+    ],
+    "func_moving_avg_plot.py": [
+        "import_marketdata_yahoo_csv",
+        "preprocess_filling_missing_values",
+        "plot_chart_local",
+        "compute_simple_moving_average_local"
+    ],
+    "func_yfinance.py": [
+        "import_marketdata_yahoo_csv",
+        "preprocess_filling_missing_values",
+        "compute_return",
+        "plotly_chart",
+        "compute_simple_moving_average"
+    ],
+    "func_autogluon.py": [],
+    "func_uci_dataset.py": [
+        "fetch_uci_dataset"
+    ],
+    "util.py": [
+        "test_function",
+        "_compute",
+        "_create_multi_select_combobox",
+        "_extract_parameter",
+        "__combine_json_files"
+    ],
+    "webscrape.py": [
+        "webscrape_to_txt"
+    ],
+    "llm.py": [
+        "chatbot_huggingface_api",
+        "chatgpt_chat"
+    ],
+    "func_viz.py": [
+        "__plotly_chart"
+    ],
+    "func_financecom.py": [
+        "movingAvg",
+        "movingAvg_50",
+        "movingAvg_10",
+        "calculate_vwap",
+        "generate_mAvg_Crossover_trading_signals",
+        "calculate_typical_price",
+        "calculate_raw_money_flow_RMF",
+        "calculate_money_flow_ratio_MFR",
+        "calculate_money_flow_index_MFI",
+        "generate_mfi_trading_signals",
+        "backtest_signals",
+        "mix_signal_strategy",
+        "parse_strategy"
+    ],
+    "func_hfd.py": [
+        "populate",
+        "dollarVolumeTraded",
+        "shareVolumeTraded",
+        "vWAP",
+        "arithmeticReturn",
+        "logReturn",
+        "tradeCount",
+        "effectiveSpread",
+        "realisedSpread",
+        "priceImpact",
+        "averagePrice",
+        "main"
+    ],
+    "func_pycaret.py": [
+        "fetch_uci_dataset",
+        "prepare_dataset_tabular_ml",
+        "split_dataset_4ml",
+        "pycaret_train_ts_model"
+    ],
+    "Minhua_trial.py": [
+        "convert_to_long_format",
+        "convert_to_integer",
+        "filter_by_multiple_val",
+        "remove_row_with_na_specified_columns",
+        "get_top_n_rows",
+        "get_bottom_n_rows",
+        "concatenate_dataframes",
+        "filter_by_val_list",
+        "filter_by_single_val"
+    ]
+}
