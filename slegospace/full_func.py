@@ -306,6 +306,257 @@ def df_shift_data_row(input_csv_file: str = 'dataspace/dataset.csv',
 
 
 
+# f-image_classification.py
+
+import os
+import numpy as np
+import pandas as pd
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
+import matplotlib.pyplot as plt
+from typing import Union  # Import Union from typing
+import shutil
+from tensorflow.keras.datasets import cifar10  # Ensure this import is present
+
+# CIFAR-10 Class Names
+CIFAR10_CLASSES = [
+    "Airplane",
+    "Automobile",
+    "Bird",
+    "Cat",
+    "Deer",
+    "Dog",
+    "Frog",
+    "Horse",
+    "Ship",
+    "Truck"
+]
+
+def fetch_cifar10_dataset(
+    output_data_path: str = 'dataspace/cifar10_data.npz',
+    images_output_dir: str = 'dataspace/cifar10_images',
+    train_split: float = 0.8,
+    random_seed: int = 42
+):
+    """
+    Fetches the CIFAR-10 dataset, saves it as a NumPy compressed file, and exports images to a directory structure.
+    """
+    # Load CIFAR-10 data
+    (X_train, y_train), (X_test, y_test) = cifar10.load_data()
+
+    # Save as NumPy compressed file
+    np.savez_compressed(
+        output_data_path,
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test
+    )
+    print(f"CIFAR-10 dataset saved to {output_data_path}")
+
+    # Create directory structure
+    if os.path.exists(images_output_dir):
+        shutil.rmtree(images_output_dir)  # Remove existing directory to avoid duplication
+    os.makedirs(images_output_dir, exist_ok=True)
+
+    # Function to save images
+    def save_images(X, y, subset):
+        for idx, (img, label) in enumerate(zip(X, y)):
+            class_name = CIFAR10_CLASSES[label[0]]
+            class_dir = os.path.join(images_output_dir, subset, class_name)
+            os.makedirs(class_dir, exist_ok=True)
+            img_path = os.path.join(class_dir, f"{subset}_{idx}.png")
+            plt.imsave(img_path, img)
+
+    # Save training images
+    save_images(X_train, y_train, 'train')
+    print(f"Training images saved to {os.path.join(images_output_dir, 'train')}")
+
+    # Save testing images as validation
+    save_images(X_test, y_test, 'validation')
+    print(f"Validation images saved to {os.path.join(images_output_dir, 'validation')}")
+
+    return (X_train, y_train), (X_test, y_test)
+
+def train_cnn_model(
+    images_dir: str = 'dataspace/cifar10_images',
+    model_output_path: str = 'dataspace/cnn_model.h5',
+    performance_output_path: str = 'dataspace/cnn_performance.txt',
+    epochs: int = 20,
+    batch_size: int = 64,
+    img_height: int = 32,
+    img_width: int = 32
+):
+    """
+    Trains a CNN model using images from a directory structure.
+    """
+    # Define ImageDataGenerators for training and validation
+    train_datagen = ImageDataGenerator(
+        rescale=1./255,
+        rotation_range=15,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True
+    )
+
+    validation_datagen = ImageDataGenerator(rescale=1./255)
+
+    # Flow training images in batches
+    train_generator = train_datagen.flow_from_directory(
+        os.path.join(images_dir, 'train'),
+        target_size=(img_height, img_width),
+        batch_size=batch_size,
+        class_mode='categorical',
+        shuffle=True,
+        seed=42
+    )
+
+    # Flow validation images in batches
+    validation_generator = validation_datagen.flow_from_directory(
+        os.path.join(images_dir, 'validation'),
+        target_size=(img_height, img_width),
+        batch_size=batch_size,
+        class_mode='categorical',
+        shuffle=False
+    )
+
+    # Build the CNN model
+    model = Sequential([
+        Conv2D(32, (3,3), activation='relu', padding='same', input_shape=(img_height, img_width, 3)),
+        Conv2D(32, (3,3), activation='relu', padding='same'),
+        MaxPooling2D((2,2)),
+        Dropout(0.25),
+
+        Conv2D(64, (3,3), activation='relu', padding='same'),
+        Conv2D(64, (3,3), activation='relu', padding='same'),
+        MaxPooling2D((2,2)),
+        Dropout(0.25),
+
+        Conv2D(128, (3,3), activation='relu', padding='same'),
+        Conv2D(128, (3,3), activation='relu', padding='same'),
+        MaxPooling2D((2,2)),
+        Dropout(0.25),
+
+        Flatten(),
+        Dense(512, activation='relu'),
+        Dropout(0.5),
+        Dense(10, activation='softmax')
+    ])
+
+    model.compile(
+        optimizer='adam',
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    # Train the model
+    history = model.fit(
+        train_generator,
+        epochs=epochs,
+        validation_data=validation_generator
+    )
+
+    # Save the trained model
+    model.save(model_output_path)
+    print(f"Trained CNN model saved to {model_output_path}")
+
+    # Save performance metrics
+    with open(performance_output_path, 'w') as f:
+        final_train_acc = history.history['accuracy'][-1]
+        final_val_acc = history.history['val_accuracy'][-1]
+        final_train_loss = history.history['loss'][-1]
+        final_val_loss = history.history['val_loss'][-1]
+        f.write(f"Final Training Accuracy: {final_train_acc:.4f}\n")
+        f.write(f"Final Validation Accuracy: {final_val_acc:.4f}\n")
+        f.write(f"Final Training Loss: {final_train_loss:.4f}\n")
+        f.write(f"Final Validation Loss: {final_val_loss:.4f}\n")
+    print(f"Performance metrics saved to {performance_output_path}")
+
+    return history.history
+
+def cnn_model_predict(
+    model_path: str = 'dataspace/cnn_model.h5',
+    input_images: Union[list, str] = 'dataspace/real_images/',
+    output_data_path: str = 'dataspace/cnn_predictions.csv',
+    visualize: bool = False,
+    img_height: int = 32,
+    img_width: int = 32
+):
+    """
+    Uses the trained CNN model to predict classes of new images.
+    """
+    model = load_model(model_path)
+    predictions = []
+
+    # If input_images is a directory, get all image file paths
+    if isinstance(input_images, str) and os.path.isdir(input_images):
+        supported_formats = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
+        image_files = [
+            os.path.join(input_images, fname)
+            for fname in os.listdir(input_images)
+            if fname.lower().endswith(supported_formats)
+        ]
+    elif isinstance(input_images, list):
+        image_files = input_images
+    else:
+        raise ValueError("input_images must be a list of file paths or a directory path.")
+
+    if not image_files:
+        print("No images found for prediction.")
+        return pd.DataFrame()
+
+    for img_path in image_files:
+        try:
+            img = load_img(img_path, target_size=(img_height, img_width))
+            img_array = img_to_array(img) / 255.0
+            img_array = np.expand_dims(img_array, axis=0)  # Shape: (1, 32, 32, 3)
+            pred = model.predict(img_array)
+            label_idx = np.argmax(pred, axis=1)[0]
+            label_name = CIFAR10_CLASSES[label_idx]
+            predictions.append({'Image_Path': img_path, 'Predicted_Label': label_name})
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
+            predictions.append({'Image_Path': img_path, 'Predicted_Label': 'Error'})
+
+    df = pd.DataFrame(predictions)
+    df.to_csv(output_data_path, index=False)
+    print(f"Predictions saved to {output_data_path}")
+
+    # Visualization
+    if visualize:
+        for _, row in df.iterrows():
+            img_path = row['Image_Path']
+            label = row['Predicted_Label']
+            try:
+                img = plt.imread(img_path)
+                plt.imshow(img)
+                plt.title(f"Predicted: {label}")
+                plt.axis('off')
+                plt.show()
+            except Exception as e:
+                print(f"Error displaying {img_path}: {e}")
+
+    return df
+
+def gather_image_paths(directory: str, supported_formats: tuple = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')) -> list:
+    """
+    Gathers all image file paths from the specified directory.
+    """
+    if not os.path.isdir(directory):
+        raise ValueError(f"The directory {directory} does not exist.")
+
+    image_files = [
+        os.path.join(directory, fname)
+        for fname in os.listdir(directory)
+        if fname.lower().endswith(supported_formats)
+    ]
+
+    if not image_files:
+        print(f"No images found in directory {directory} with supported formats {supported_formats}.")
+
+    return image_files
+
 import pandas as pd
 import vectorbt as vbt
 from typing import Union
@@ -667,6 +918,191 @@ def search_arxiv_papers(search_query: str = 'machine learning',
     df.to_csv(filename, index=False)
 
     return df
+# covid19_pipeline.py
+
+import pandas as pd
+import pickle
+from prophet import Prophet
+import plotly.graph_objects as go
+import os
+
+def fetch_covid19_data(
+    url: str = "https://covid.ourworldindata.org/data/owid-covid-data.csv",
+    output_file: str = "dataspace/covid19_data.csv",
+    country: str = "United States"
+) -> pd.DataFrame:
+    """
+    Fetches COVID-19 data for a specific country and saves it to a CSV file.
+
+    Parameters:
+        url (str): URL to fetch the COVID-19 data CSV.
+        output_file (str): Path to save the filtered COVID-19 data.
+        country (str): Country name to filter the data.
+
+    Returns:
+        pd.DataFrame: DataFrame containing COVID-19 data for the specified country.
+    """
+    df = pd.read_csv(url)
+    df_country = df[df['location'] == country]
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    df_country.to_csv(output_file, index=False)
+    return df_country
+
+def preprocess_covid19_data(
+    input_file: str = "dataspace/covid19_data.csv",
+    output_file: str = "dataspace/covid19_preprocessed.csv",
+    date_column: str = "date",
+    target_column: str = "new_cases_smoothed",
+    fill_missing: bool = True
+) -> pd.DataFrame:
+    """
+    Preprocesses COVID-19 data for time-series forecasting.
+
+    Parameters:
+        input_file (str): Path to the CSV file containing COVID-19 data.
+        output_file (str): Path to save the preprocessed data.
+        date_column (str): Name of the column containing dates.
+        target_column (str): Name of the column to forecast.
+        fill_missing (bool): Whether to fill missing values.
+
+    Returns:
+        pd.DataFrame: DataFrame ready for time-series modeling.
+    """
+    df = pd.read_csv(input_file)
+    df = df[[date_column, target_column]]
+    if fill_missing:
+        df[target_column].fillna(method='ffill', inplace=True)
+        df[target_column].fillna(method='bfill', inplace=True)
+    df = df.dropna()
+    df.columns = ['ds', 'y']  # Prophet requires columns 'ds' and 'y'
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    df.to_csv(output_file, index=False)
+    return df
+
+def build_and_train_prophet_model(
+    input_file: str = "dataspace/covid19_preprocessed.csv",
+    model_save_path: str = "dataspace/prophet_model.pkl"
+) -> Prophet:
+    """
+    Builds and trains a Prophet model on the preprocessed data.
+
+    Parameters:
+        input_file (str): Path to the preprocessed CSV file.
+        model_save_path (str): Path to save the trained model.
+
+    Returns:
+        Prophet: Trained Prophet model.
+    """
+    df = pd.read_csv(input_file)
+    model = Prophet()
+    model.fit(df)
+    os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
+    # Save the model to a file
+    with open(model_save_path, 'wb') as f:
+        pickle.dump(model, f)
+    return model
+
+def forecast_covid19_cases(
+    periods: int = 30,
+    model_load_path: str = "dataspace/prophet_model.pkl",
+    forecast_save_path: str = "dataspace/covid19_forecast.csv"
+) -> pd.DataFrame:
+    """
+    Uses the trained Prophet model to forecast future COVID-19 cases.
+
+    Parameters:
+        periods (int): Number of days to forecast into the future.
+        model_load_path (str): Path to load the trained model.
+        forecast_save_path (str): Path to save the forecasted data.
+
+    Returns:
+        pd.DataFrame: DataFrame containing forecasted values.
+    """
+    # Load the model
+    with open(model_load_path, 'rb') as f:
+        model = pickle.load(f)
+    # Create future dataframe
+    future = model.make_future_dataframe(periods=periods)
+    forecast = model.predict(future)
+    os.makedirs(os.path.dirname(forecast_save_path), exist_ok=True)
+    forecast.to_csv(forecast_save_path, index=False)
+    return forecast
+
+
+import pandas as pd
+import plotly.graph_objects as go
+import os
+
+def visualize_forecast(
+    forecast_file: str = "dataspace/covid19_forecast.csv",
+    actuals_file: str = "dataspace/covid19_preprocessed.csv",
+    output_html_file: str = "dataspace/covid19_forecast.html"
+) -> str:
+    """
+    Creates an interactive plot of the COVID-19 forecast alongside actual data.
+
+    Parameters:
+        forecast_file (str): Path to the CSV file containing forecasted data.
+        actuals_file (str): Path to the CSV file containing actual data.
+        output_html_file (str): Path to save the forecast plot as an HTML file.
+
+    Returns:
+        str: Confirmation message indicating the plot has been saved.
+    """
+    forecast = pd.read_csv(forecast_file)
+    actuals = pd.read_csv(actuals_file)
+    
+    fig = go.Figure()
+    # Add actual cases
+    fig.add_trace(go.Scatter(
+        x=actuals['ds'], y=actuals['y'], mode='markers', name='Actual Cases',
+        marker=dict(color='blue')
+    ))
+    # Add forecasted cases
+    fig.add_trace(go.Scatter(
+        x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Forecast',
+        line=dict(color='red')
+    ))
+    # Add confidence intervals
+    fig.add_trace(go.Scatter(
+        x=forecast['ds'], y=forecast['yhat_upper'], mode='lines', name='Upper Confidence Interval',
+        line=dict(width=0), showlegend=False
+    ))
+    fig.add_trace(go.Scatter(
+        x=forecast['ds'], y=forecast['yhat_lower'], mode='lines', name='Lower Confidence Interval',
+        fill='tonexty', fillcolor='rgba(68, 68, 68, 0.1)', line=dict(width=0), showlegend=False
+    ))
+    fig.update_layout(
+        title='COVID-19 Cases Forecast',
+        xaxis_title='Date',
+        yaxis_title='Number of Cases',
+        legend_title='Legend',
+    )
+    os.makedirs(os.path.dirname(output_html_file), exist_ok=True)
+    fig.write_html(output_html_file)
+    print(f"Forecast visualization saved to {output_html_file}")
+    return "COVID-19 forecast plot saved."
+
+
+
+# # Example usage
+# if __name__ == "__main__":
+#     # Step 1: Fetch data
+#     df_covid = fetch_covid19_data(country="United States")
+
+#     # Step 2: Preprocess data
+#     df_preprocessed = preprocess_covid19_data()
+
+#     # Step 3: Build and train the model
+#     prophet_model = build_and_train_prophet_model()
+
+#     # Step 4: Forecast future cases
+#     forecast_df = forecast_covid19_cases(periods=30)
+
+#     # Step 5: Visualize the forecast
+#     message = visualize_forecast()
+#     print(message)
+
 import ast
 import pandas as pd
 import datetime
@@ -1079,6 +1515,196 @@ def compute_simple_moving_average(input_file_path: str = 'dataspace/dataset.csv'
 #     return predictions
 
 
+# environmental_anomaly_detection_pipeline.py
+
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+import plotly.graph_objects as go
+import requests
+import os
+
+def fetch_air_quality_data(
+    url: str = "https://archive.ics.uci.edu/ml/machine-learning-databases/00360/AirQualityUCI.zip",
+    extract_to: str = "dataspace/",
+    output_csv_file: str = "dataspace/AirQuality.csv"
+):
+    """
+    Fetches the Air Quality dataset from the UCI repository, extracts it, and saves it as a CSV file.
+
+    Parameters:
+    - url (str): URL to download the dataset ZIP file.
+    - extract_to (str): Directory to extract the ZIP contents.
+    - output_csv_file (str): Path to save the extracted CSV file.
+
+    Returns:
+    - pd.DataFrame: The Air Quality dataset as a pandas DataFrame.
+    """
+    import zipfile
+    import io
+
+    # Ensure the dataspace directory exists
+    os.makedirs(extract_to, exist_ok=True)
+
+    # Download the dataset
+    response = requests.get(url)
+    if response.status_code == 200:
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            # Extract the CSV file
+            z.extract("AirQualityUCI.csv", path=extract_to)
+        
+        # Read the CSV file
+        df = pd.read_csv(os.path.join(extract_to, "AirQualityUCI.csv"), sep=';', decimal=',')
+        
+        # Drop the last two columns which are empty
+        df = df.iloc[:, :-2]
+        
+        # Replace comma with dot and convert to numeric
+        df = df.replace(',', '.', regex=True)
+        for col in df.columns[2:]:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Save the cleaned dataset
+        df.to_csv(output_csv_file, index=False)
+        return df
+    else:
+        raise ConnectionError(f"Failed to download dataset. Status code: {response.status_code}")
+
+def preprocess_air_quality_data(
+    input_file_path: str = "dataspace/AirQuality.csv",
+    output_file_path: str = "dataspace/preprocessed_AirQuality.csv",
+    target_column: str = "NO2(GT)"
+):
+    """
+    Preprocesses the Air Quality dataset by handling missing values and selecting relevant features.
+
+    Parameters:
+    - input_file_path (str): Path to the raw CSV dataset.
+    - output_file_path (str): Path to save the preprocessed CSV dataset.
+    - target_column (str): The column to analyze for anomalies.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame.
+    """
+    df = pd.read_csv(input_file_path)
+    
+    # Convert 'Date' and 'Time' to datetime
+    df['Datetime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%d/%m/%Y %H.%M.%S', errors='coerce')
+    
+    # Drop rows with invalid datetime
+    df.dropna(subset=['Datetime'], inplace=True)
+    
+    # Set datetime as index
+    df.set_index('Datetime', inplace=True)
+    
+    # Select relevant columns (example: CO, NO2, SO2, etc.)
+    relevant_columns = [
+        "CO(GT)", "PT08.S1(CO)", "NMHC(GT)", "C6H6(GT)",
+        "PT08.S2(NMHC)", "NOx(GT)", "PT08.S3(NOx)", "NO2(GT)",
+        "PT08.S4(NO2)", "PT08.S5(O3)", "T", "RH", "AH"
+    ]
+    df = df[relevant_columns]
+    
+    # Handle missing values by forward filling
+    df.fillna(method='ffill', inplace=True)
+    
+    # Save the preprocessed data
+    df.to_csv(output_file_path)
+    return df
+
+def detect_anomalies_isolation_forest(
+    input_file_path: str = "dataspace/preprocessed_AirQuality.csv",
+    target_column: str = "NO2(GT)",
+    output_file_path: str = "dataspace/air_quality_anomalies.csv"
+):
+    """
+    Detects anomalies in the specified target column using Isolation Forest.
+
+    Parameters:
+    - input_file_path (str): Path to the preprocessed CSV dataset.
+    - target_column (str): Name of the column to analyze for anomalies.
+    - output_file_path (str): Path to save the results with anomaly labels.
+
+    Returns:
+    - pd.DataFrame: DataFrame with anomaly labels.
+    """
+    df = pd.read_csv(input_file_path, parse_dates=['Datetime'], index_col='Datetime')
+    
+    # Select the target column
+    data = df[[target_column]].dropna()
+    
+    # Initialize Isolation Forest
+    model = IsolationForest(contamination=0.01, random_state=42)
+    data['Anomaly'] = model.fit_predict(data)
+    
+    # Convert prediction to boolean
+    data['Anomaly'] = data['Anomaly'].apply(lambda x: True if x == -1 else False)
+    
+    # Merge anomaly labels back to the original dataframe
+    df = df.join(data['Anomaly'], how='left')
+    df['Anomaly'].fillna(False, inplace=True)
+    
+    # Save the results
+    df.to_csv(output_file_path)
+    return df
+
+def plot_anomalies(
+    input_file_path: str = "dataspace/air_quality_anomalies.csv",
+    target_column: str = "NO2(GT)",
+    date_column: str = "Datetime",
+    anomaly_column: str = "Anomaly",
+    output_html_file: str = "dataspace/air_quality_anomaly_plot.html"
+):
+    """
+    Plots the time series data and highlights the detected anomalies.
+
+    Parameters:
+    - input_file_path (str): Path to the CSV file containing data and anomaly labels.
+    - target_column (str): Name of the column to plot.
+    - date_column (str): Name of the date column.
+    - anomaly_column (str): Name of the anomaly label column.
+    - output_html_file (str): Path to save the interactive Plotly HTML plot.
+
+    Returns:
+    - None: Saves the plot to the specified HTML file.
+    """
+    df = pd.read_csv(input_file_path, parse_dates=[date_column])
+    
+    # Create the main time series plot
+    fig = go.Figure()
+    
+    fig.add_trace(
+        go.Scatter(
+            x=df[date_column],
+            y=df[target_column],
+            mode='lines',
+            name=target_column
+        )
+    )
+    
+    # Highlight anomalies
+    anomalies = df[df[anomaly_column]]
+    fig.add_trace(
+        go.Scatter(
+            x=anomalies[date_column],
+            y=anomalies[target_column],
+            mode='markers',
+            name='Anomalies',
+            marker=dict(color='red', size=10, symbol='circle-open')
+        )
+    )
+    
+    # Update layout for better visualization
+    fig.update_layout(
+        title=f'Time Series Anomaly Detection for {target_column}',
+        xaxis_title='Datetime',
+        yaxis_title=target_column,
+        legend=dict(x=0.01, y=0.99),
+        hovermode='x unified'
+    )
+    
+    # Save the plot as an HTML file
+    fig.write_html(output_html_file)
+    print(f"Anomaly plot saved to {output_html_file}")
 from ucimlrepo import fetch_ucirepo 
 def fetch_uci_dataset(uci_data_id:int=360, 
                       output_file_path:str='dataspace/AirQuality.csv'):
@@ -2253,167 +2879,228 @@ def main():
 
 if __name__ == "__main__":
     main()
-from sklearn.model_selection import train_test_split
+# regression_pipeline.py
+
 import pandas as pd
-from ucimlrepo import fetch_ucirepo 
-import pandas as pd
-from typing import Union
 import joblib
-# Import necessary libraries
-from pycaret.time_series import *
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+from typing import Union
 
+def fetch_sklearn_dataset(
+    dataset_name: str = 'california_housing',
+    output_csv_file: str = 'dataspace/housing_dataset.csv'
+):
+    """
+    Fetches a dataset from scikit-learn's datasets and saves it as a CSV file.
 
-def fetch_uci_dataset(uci_data_id:int=360, 
-                      output_file_path:str='dataspace/AirQuality.csv'):
+    Parameters:
+    - dataset_name (str): Name of the dataset to fetch ('california_housing').
+    - output_csv_file (str): Path to save the dataset as a CSV file.
 
+    Returns:
+    - pd.DataFrame: The dataset as a pandas DataFrame.
+    """
+    if dataset_name == 'california_housing':
+        data = fetch_california_housing(as_frame=True)
+    else:
+        raise ValueError("Unsupported dataset_name. Choose 'california_housing'.")
 
-    # fetch dataset
-    downloaded_data = fetch_ucirepo(id=uci_data_id)
-
-    # data (as pandas dataframes)
-    X = downloaded_data.data.features
-    y = downloaded_data.data.targets
-
-    # # metadata
-    # print(air_quality.metadata)
-
-    # # variable information
-    # print(air_quality.variables)
-    
-
-    # Assuming `X` and `y` are both pandas DataFrames with the same index
-    df = pd.concat([X, y], axis=1)
-    df.to_csv(output_file_path)
+    df = pd.concat([data.data, data.target.rename('target')], axis=1)
+    df.to_csv(output_csv_file, index=False)
     return df
 
-def prepare_dataset_tabular_ml(input_file_path: str = 'dataspace/AirQuality.csv', 
-                               index_col: Union[int, bool] = 0,
-                               target_column_name: str = 'NO2(GT)', 
-                               drop_columns: list = ['Date','NO2(GT)','Time'],
-                               output_file_path:str = 'dataspace/prepared_dataset_tabular_ml.csv'):
+def train_sklearn_regression_model(
+    input_file_path: str = 'dataspace/housing_dataset.csv',
+    target_column: str = 'target',
+    test_size: float = 0.2,
+    random_state: int = 42,
+    model_output_path: str = 'dataspace/sklearn_regression_model.pkl',
+    performance_output_path: str = 'dataspace/sklearn_regression_performance.txt'
+):
     """
-    Prepares a dataset for tabular machine learning by loading, cleaning, and optionally modifying it.
-    """
-    
-    # Load the dataset
-    df = pd.read_csv(input_file_path, index_col=index_col)
-    
-    # Drop any 'Unnamed' columns that may exist
-    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-    
-    # Set the target column if it exists
-    if target_column_name in df.columns:
-        df['target'] = df[target_column_name].values
-    
-    # Drop specified columns if any
-    if drop_columns is not None:
-        df = df.drop(columns=drop_columns, errors='ignore')
-    
-    # Save the cleaned dataset
-    output_file_path = 'dataspace/prepared_dataset_tabular_ml.csv'
-    df.to_csv(output_file_path)
-    
-    return df
+    Trains a Linear Regression model and saves it.
 
-
-
-def split_dataset_4ml(input_data_file:str = 'dataspace/prepared_dataset_tabular_ml.csv', 
-                           index_col: Union[int, bool] = 0,
-                           train_size:int =0.6, 
-                           val_size:int =0.2, 
-                           test_size:int =0.2,
-                           output_train_file:str ='dataspace/train.csv', 
-                           output_val_file:str ='dataspace/val.csv', 
-                           output_test_file:str ='dataspace/test.csv'):
-    """
-    Split a dataset into training, validation, and test sets and save them as CSV files.
-    
     Parameters:
-    - data (DataFrame): The dataset to split.
-    - train_size (float): The proportion of the dataset to include in the train split.
-    - val_size (float): The proportion of the dataset to include in the validation split.
-    - test_size (float): The proportion of the dataset to include in the test split.
-    - train_path (str): File path to save the training set CSV.
-    - val_path (str): File path to save the validation set CSV.
-    - test_path (str): File path to save the test set CSV.
-    
+    - input_file_path (str): Path to the dataset CSV file.
+    - target_column (str): Name of the target column.
+    - test_size (float): Fraction of data to use as test set.
+    - random_state (int): Seed for reproducibility.
+    - model_output_path (str): Path to save the trained model.
+    - performance_output_path (str): Path to save performance metrics.
+
     Returns:
-    - train_data (DataFrame): The training set.
-    - val_data (DataFrame): The validation set.
-    - test_data (DataFrame): The test set.
+    - dict: Dictionary containing performance metrics.
     """
-
-    # Load data
-    data = pd.read_csv(input_data_file,index_col=index_col)
-
-    if not (0 < train_size < 1) or not (0 < val_size < 1) or not (0 < test_size < 1):
-        raise ValueError("All size parameters must be between 0 and 1.")
-        
-    if train_size + val_size + test_size != 1:
-        raise ValueError("The sum of train_size, val_size, and test_size must equal 1.")
-        
-    # First split to separate out the test set
-    temp_train_data, test_data = train_test_split(data, test_size=test_size, random_state=42)
-    
-    # Adjust val_size proportion to account for the initial split (for the remaining data)
-    adjusted_val_size = val_size / (1 - test_size)
-    
-    # Second split to separate out the validation set from the temporary training set
-    train_data, val_data = train_test_split(temp_train_data, test_size=adjusted_val_size, random_state=42)
-    
-    # Save to CSV
-    train_data.to_csv(output_train_file, index=False)
-    val_data.to_csv(output_val_file, index=False)
-    test_data.to_csv(output_test_file, index=False)
-    
-    return train_data, val_data, test_data
-
-
-def pycaret_train_ts_model(input_file_path:str= 'dataspace/train.csv',
-                            # index_col: Union[int, bool] = False,
-                            target_column:str = 'target', 
-                            use_gpu:bool = False,
-                            forecast_horizon:int = 3 , 
-                            folds:int = 1, 
-                            session_id:int= 123, 
-                            output_file_path:str = 'dataspace/pycaret_ts_model.pkl'):
-    """
-    Trains a time series model using PyCaret based on the provided CSV data and saves the model.
-    
-    Parameters:
-    - input_file_path: str, path to the CSV file containing the time series data.
-    - target_column: str, the name of the target column for forecasting.
-    - forecast_horizon: int, the number of periods to forecast into the future.
-    - folds: int, the number of folds to be used for cross-validation.
-    - session_id: int, a random seed for reproducibility.
-    - output_file_path: str, path to save the trained model.
-    
-    Returns:
-    - The path where the model was saved.
-    """
-    
-    # Load data
-    # df = pd.read_csv(input_file_path,index_col =index_col)
     df = pd.read_csv(input_file_path)
-    # Ensure the DataFrame is in the correct format (optional, depending on your CSV structure)
-    # df['date_column'] = pd.to_datetime(df['date_column'])
-    # df.set_index('date_column', inplace=True)
-    
-    # Initialize PyCaret setup
-    s = setup(data=df, target=target_column, fh=forecast_horizon, fold=folds, session_id=session_id,
-              verbose=True, use_gpu = use_gpu)
-    
-    # Compare models and select the best one
-    best_model = compare_models()
-    
-    # Finalize the model to make it ready for predictions
-    final_model = finalize_model(best_model)
-    
-    # Save the model
-    joblib.dump(final_model, model_save_path)
-    
-    return output_file_path
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
 
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    # Save the model
+    joblib.dump(model, model_output_path)
+
+    # Save performance metrics
+    with open(performance_output_path, 'w') as f:
+        f.write(f'MSE: {mse}\n')
+        f.write(f'R2 Score: {r2}\n')
+
+    return {'MSE': mse, 'R2 Score': r2}
+
+def sklearn_model_predict(
+    model_path: str = 'dataspace/sklearn_regression_model.pkl',
+    input_data_path: str = 'dataspace/housing_test.csv',
+    output_data_path: str = 'dataspace/housing_predictions.csv'
+):
+    """
+    Loads a trained sklearn model and makes predictions on new data.
+
+    Parameters:
+    - model_path (str): Path to the saved sklearn model.
+    - input_data_path (str): Path to the CSV file containing new data.
+    - output_data_path (str): Path to save the predictions.
+
+    Returns:
+    - pd.Series: Predictions made by the model.
+    """
+    model = joblib.load(model_path)
+    X_new = pd.read_csv(input_data_path)
+    predictions = model.predict(X_new)
+
+    # Save predictions to CSV
+    output_df = X_new.copy()
+    output_df['Predicted_Target'] = predictions
+    output_df.to_csv(output_data_path, index=False)
+
+    return predictions
+
+# sentiment_analysis_pipeline.py
+
+import pandas as pd
+import nltk
+import joblib
+from nltk.corpus import movie_reviews
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+def fetch_nltk_movie_reviews(output_csv_file: str = 'dataspace/movie_reviews.csv'):
+    """
+    Fetches the NLTK movie reviews dataset and saves it as a CSV file.
+
+    Parameters:
+    - output_csv_file (str): Path to save the dataset.
+
+    Returns:
+    - pd.DataFrame: DataFrame containing reviews and labels.
+    """
+    nltk.download('movie_reviews', quiet=True)
+
+    documents = [
+        (' '.join(movie_reviews.words(fileid)), category)
+        for category in movie_reviews.categories()
+        for fileid in movie_reviews.fileids(category)
+    ]
+
+    reviews = [doc for doc, _ in documents]
+    labels = [label for _, label in documents]
+
+    df = pd.DataFrame({'Review': reviews, 'Label': labels})
+    df.to_csv(output_csv_file, index=False)
+    return df
+
+def train_text_classification_model(
+    input_file_path: str = 'dataspace/movie_reviews.csv',
+    text_column: str = 'Review',
+    target_column: str = 'Label',
+    test_size: float = 0.2,
+    random_state: int = 42,
+    model_output_path: str = 'dataspace/text_classification_model.pkl',
+    performance_output_path: str = 'dataspace/text_classification_performance.txt'
+):
+    """
+    Trains a text classification model using Logistic Regression.
+
+    Parameters:
+    - input_file_path (str): Path to the dataset CSV file.
+    - text_column (str): Name of the text column.
+    - target_column (str): Name of the target column.
+    - test_size (float): Fraction of data to use as test set.
+    - random_state (int): Seed for reproducibility.
+    - model_output_path (str): Path to save the trained model.
+    - performance_output_path (str): Path to save performance metrics.
+
+    Returns:
+    - dict: Dictionary containing performance metrics.
+    """
+    df = pd.read_csv(input_file_path)
+    X = df[text_column]
+    y = df[target_column]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
+    X_train_vect = vectorizer.fit_transform(X_train)
+    X_test_vect = vectorizer.transform(X_test)
+
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X_train_vect, y_train)
+
+    y_pred = model.predict(X_test_vect)
+    accuracy = accuracy_score(y_test, y_pred)
+    report = classification_report(y_test, y_pred)
+
+    # Save the model and vectorizer
+    joblib.dump((model, vectorizer), model_output_path)
+
+    # Save performance metrics
+    with open(performance_output_path, 'w') as f:
+        f.write(f'Accuracy: {accuracy}\n')
+        f.write(f'Classification Report:\n{report}')
+
+    return {'Accuracy': accuracy, 'Report': report}
+
+def text_model_predict(
+    model_path: str = 'dataspace/text_classification_model.pkl',
+    input_texts: list = [
+        "I absolutely loved this movie. The story was gripping and the characters were well-developed.",
+        "This was the worst film I have ever seen. Completely a waste of time."
+    ],
+    output_file_path: str = 'dataspace/text_predictions.csv'
+):
+    """
+    Uses the trained text classification model to predict sentiments of new texts.
+
+    Parameters:
+    - model_path (str): Path to the saved model and vectorizer.
+    - input_texts (list): List of texts to classify.
+    - output_file_path (str): Path to save the predictions.
+
+    Returns:
+    - pd.DataFrame: DataFrame containing texts and their predicted labels.
+    """
+    model, vectorizer = joblib.load(model_path)
+    X_new_vect = vectorizer.transform(input_texts)
+    predictions = model.predict(X_new_vect)
+
+    df = pd.DataFrame({'Text': input_texts, 'Predicted_Label': predictions})
+    df.to_csv(output_file_path, index=False)
+    return df
 import pandas as pd
 
 def convert_to_long_format(input_file: str = "dataspace/World_Development_Indicators.csv", output_file: str = "dataspace/world_dev_indicator_long.csv", id_vars: list = ['Country Name', 'Country Code', 'Series Name', 'Series Code'], key_name: str = "Year", value_name: str = "Money"):
@@ -2474,3 +3161,73 @@ def filter_by_single_val(input_file: str = "dataspace/gdp_series_all.csv", outpu
     df = df[df[column] == value]
     df.to_csv(output_file, index=False)
     return df
+# clustering_pipeline.py
+
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.cluster import KMeans
+import plotly.express as px
+
+def fetch_iris_dataset(output_csv_file: str = 'dataspace/iris_dataset.csv'):
+    """
+    Fetches the Iris dataset and saves it as a CSV file.
+
+    Parameters:
+    - output_csv_file (str): Path to save the dataset as a CSV file.
+
+    Returns:
+    - pd.DataFrame: The dataset as a pandas DataFrame.
+    """
+    data = load_iris(as_frame=True)
+    df = pd.concat([data.data, data.target.rename('target')], axis=1)
+    df.to_csv(output_csv_file, index=False)
+    return df
+
+def perform_kmeans_clustering(
+    input_file_path: str = 'dataspace/iris_dataset.csv',
+    n_clusters: int = 3,
+    output_file_path: str = 'dataspace/iris_clusters.csv'
+):
+    """
+    Performs KMeans clustering on the dataset.
+
+    Parameters:
+    - input_file_path (str): Path to the dataset CSV file.
+    - n_clusters (int): Number of clusters.
+    - output_file_path (str): Path to save the clustered data.
+
+    Returns:
+    - pd.DataFrame: DataFrame with cluster labels.
+    """
+    df = pd.read_csv(input_file_path)
+    X = df.drop(columns=['target'])
+
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    df['Cluster'] = kmeans.fit_predict(X)
+
+    df.to_csv(output_file_path, index=False)
+    return df
+
+def plotly_cluster_visualization(
+    input_csv_file: str = 'dataspace/iris_clusters.csv',
+    x_axis: str = 'sepal length (cm)',
+    y_axis: str = 'sepal width (cm)',
+    cluster_col: str = 'Cluster',
+    output_html_file: str = 'dataspace/iris_clusters_plot.html'
+):
+    """
+    Visualizes clusters using Plotly.
+
+    Parameters:
+    - input_csv_file (str): Path to the CSV file with clustered data.
+    - x_axis (str): Column name for the X-axis.
+    - y_axis (str): Column name for the Y-axis.
+    - cluster_col (str): Column name for cluster labels.
+    - output_html_file (str): Path to save the HTML plot.
+
+    Returns:
+    - None
+    """
+    df = pd.read_csv(input_csv_file)
+    fig = px.scatter(df, x=x_axis, y=y_axis, color=cluster_col)
+    fig.write_html(output_html_file)

@@ -16,7 +16,8 @@ from typing import Dict, Any
 
 # Install required packages if they are not already installed
 def check_and_install_packages():
-    required_packages = ['panel', 'param', 'pandas', 'kglab', 'pyvis', 'rdflib']
+    # required_packages = ['panel', 'param', 'pandas', 'kglab', 'pyvis', 'rdflib']
+    required_packages = ['panel', 'param', 'pandas', 'pyvis', 'rdflib']
     for package in required_packages:
         try:
             __import__(package)
@@ -29,7 +30,7 @@ check_and_install_packages()
 import panel as pn
 import param
 import pandas as pd
-import kglab
+# import kglab
 from pyvis.network import Network
 from rdflib import URIRef
 
@@ -232,9 +233,11 @@ class SLEGOApp:
 
     def setup_full_func_mapping(self):
         if os.path.exists(self.full_func_mapping_path):
+            print("lololololololololol")
             os.remove(self.full_func_mapping_path)
 
         if os.path.exists(self.full_func_file_path):
+            print("lololololololololol!!!!!!!!!!!!!!!!!!!")
             os.remove(self.full_func_file_path)
 
         # Create a full function mapping file
@@ -702,72 +705,72 @@ class SLEGOApp:
         else:
             logger.error(f"The file {output_file_path} does not exist.")
 
-    def visualize_rdf_graph(self, input_file_path, output_file_path):
-        logger.info("Visualizing RDF graph...")
-        try:
-            kg = kglab.KnowledgeGraph()
-            kg.load_rdf(input_file_path)
-            net = Network(
-                notebook=True, height="1000px", width="100%",
-                bgcolor="#ffffff", font_color="black",
-                directed=True, cdn_resources='remote'
-            )
+    # def visualize_rdf_graph(self, input_file_path, output_file_path):
+    #     logger.info("Visualizing RDF graph...")
+    #     try:
+    #         kg = kglab.KnowledgeGraph()
+    #         kg.load_rdf(input_file_path)
+    #         net = Network(
+    #             notebook=True, height="1000px", width="100%",
+    #             bgcolor="#ffffff", font_color="black",
+    #             directed=True, cdn_resources='remote'
+    #         )
 
-            # Define visualization options and styles as per your previous code
-            net.set_options("""
-            var options = {
-                "nodes": {
-                    "shape": "box",
-                    "size": 30,
-                    "font": {
-                        "size": 14,
-                        "face": "Tahoma"
-                    }
-                },
-                "edges": {
-                    "arrows": {
-                        "to": {
-                            "enabled": true,
-                            "scaleFactor": 1
-                        }
-                    },
-                    "smooth": {
-                        "type": "continuous"
-                    }
-                },
-                "layout": {
-                    "hierarchical": {
-                        "enabled": true,
-                        "levelSeparation": 250,
-                        "nodeSpacing": 200,
-                        "treeSpacing": 300,
-                        "blockShifting": true,
-                        "edgeMinimization": true,
-                        "parentCentralization": true,
-                        "direction": "LR",
-                        "sortMethod": "hubsize"
-                    }
-                },
-                "physics": {
-                    "enabled": false
-                }
-            }
-            """)
+    #         # Define visualization options and styles as per your previous code
+    #         net.set_options("""
+    #         var options = {
+    #             "nodes": {
+    #                 "shape": "box",
+    #                 "size": 30,
+    #                 "font": {
+    #                     "size": 14,
+    #                     "face": "Tahoma"
+    #                 }
+    #             },
+    #             "edges": {
+    #                 "arrows": {
+    #                     "to": {
+    #                         "enabled": true,
+    #                         "scaleFactor": 1
+    #                     }
+    #                 },
+    #                 "smooth": {
+    #                     "type": "continuous"
+    #                 }
+    #             },
+    #             "layout": {
+    #                 "hierarchical": {
+    #                     "enabled": true,
+    #                     "levelSeparation": 250,
+    #                     "nodeSpacing": 200,
+    #                     "treeSpacing": 300,
+    #                     "blockShifting": true,
+    #                     "edgeMinimization": true,
+    #                     "parentCentralization": true,
+    #                     "direction": "LR",
+    #                     "sortMethod": "hubsize"
+    #                 }
+    #             },
+    #             "physics": {
+    #                 "enabled": false
+    #             }
+    #         }
+    #         """)
 
-            for subject, predicate, obj in kg.rdf_graph().triples((None, None, None)):
-                if isinstance(subject, URIRef):
-                    self.__add_node(net, kg, subject)
-                if isinstance(obj, URIRef):
-                    self.__add_node(net, kg, obj)
-                if isinstance(predicate, URIRef):
-                    edge_label = predicate.split("/")[-1]
-                    net.add_edge(str(subject), str(obj), label=edge_label)
+    #         for subject, predicate, obj in kg.rdf_graph().triples((None, None, None)):
+    #             if isinstance(subject, URIRef):
+    #                 self.__add_node(net, kg, subject)
+    #             if isinstance(obj, URIRef):
+    #                 self.__add_node(net, kg, obj)
+    #             if isinstance(predicate, URIRef):
+    #                 edge_label = predicate.split("/")[-1]
+    #                 net.add_edge(str(subject), str(obj), label=edge_label)
 
-            net.save_graph(output_file_path)
-            logger.info(f"RDF graph saved to {output_file_path}")
-        except Exception as e:
-            logger.error(f"Error visualizing RDF graph: {e}")
-            self.output_text.value += f"\nError visualizing RDF graph: {e}"
+    #         net.save_graph(output_file_path)
+    #         logger.info(f"RDF graph saved to {output_file_path}")
+    #     except Exception as e:
+    #         logger.error(f"Error visualizing RDF graph: {e}")
+    #         self.output_text.value += f"\nError visualizing RDF graph: {e}"
 
     def __add_node(self, net, kg, node):
         label = node.split("/")[-1]

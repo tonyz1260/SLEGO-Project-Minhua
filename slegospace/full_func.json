@@ -9,6 +9,13 @@
         "split_dataset_4ml",
         "df_shift_data_row"
     ],
+    "f-image_classificaiton.py": [
+        "fetch_cifar10_dataset",
+        "train_cnn_model",
+        "cnn_model_predict",
+        "gather_image_paths",
+        "save_images"
+    ],
     "func_backtest.py": [
         "moving_avg_cross_signal",
         "vbt_sginal_backtest",
@@ -20,6 +27,13 @@
     "func_arxiv.py": [
         "download_papers_from_arxiv_csv",
         "search_arxiv_papers"
+    ],
+    "func_covid19.py": [
+        "fetch_covid19_data",
+        "preprocess_covid19_data",
+        "build_and_train_prophet_model",
+        "forecast_covid19_cases",
+        "visualize_forecast"
     ],
     "func_moving_avg_plot.py": [
         "import_marketdata_yahoo_csv",
@@ -35,6 +49,12 @@
         "compute_simple_moving_average"
     ],
     "func_autogluon.py": [],
+    "f-anomalydetection.py": [
+        "fetch_air_quality_data",
+        "preprocess_air_quality_data",
+        "detect_anomalies_isolation_forest",
+        "plot_anomalies"
+    ],
     "func_uci_dataset.py": [
         "fetch_uci_dataset"
     ],
@@ -84,11 +104,15 @@
         "averagePrice",
         "main"
     ],
-    "func_pycaret.py": [
-        "fetch_uci_dataset",
-        "prepare_dataset_tabular_ml",
-        "split_dataset_4ml",
-        "pycaret_train_ts_model"
+    "f-regression.py": [
+        "fetch_sklearn_dataset",
+        "train_sklearn_regression_model",
+        "sklearn_model_predict"
+    ],
+    "f-sentiment_analysis.py": [
+        "fetch_nltk_movie_reviews",
+        "train_text_classification_model",
+        "text_model_predict"
     ],
     "Minhua_trial.py": [
         "convert_to_long_format",
@@ -100,5 +124,10 @@
         "concatenate_dataframes",
         "filter_by_val_list",
         "filter_by_single_val"
+    ],
+    "f-irisclustering.py": [
+        "fetch_iris_dataset",
+        "perform_kmeans_clustering",
+        "plotly_cluster_visualization"
     ]
 }

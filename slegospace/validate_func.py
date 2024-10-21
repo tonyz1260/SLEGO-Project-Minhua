@@ -3,7 +3,6 @@ import importlib.util
 import ast
 from typing import Callable, List
 from config import *
-import func
 import json
 
 from openai import OpenAI
@@ -105,6 +104,7 @@ def warning_api_call(name, obj):
     You must not add any additional text or characters to the response. From here, I will provide you with the docstrings of existing functions that you need to assess."
 
     # iterate through the existing functions in func.py and provide the docstrings for the prompt
+    import full_func as func
     for func_name, func_obj in inspect.getmembers(func):
         if inspect.isfunction(func_obj) and func_obj.__module__ == func.__name__:
             prompt += (

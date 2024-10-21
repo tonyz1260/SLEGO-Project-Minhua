@@ -33,10 +33,11 @@ def get_environment_config(use_local_repo: bool = True, local_repo_path: Optiona
         config['drive_folder'] = drive_root
         config['drive_mainfolder'] = os.path.join(drive_root, 'SLEGO')
     elif env == 'github-codespaces':
-        print("Setting up configuration for GitHub Codespaces environment.")
-        home_dir = os.path.expanduser('~')
+        print("Setting up configuration for GitHub Codespaces environment. Let's go hahahahhahaha")
+        # the name is workspaces instead of codespaces
+        home_dir = '/workspaces/'
         config['drive_folder'] = home_dir
-        config['drive_mainfolder'] = os.path.join(home_dir, 'SLEGO')
+        config['drive_mainfolder'] = os.path.join(home_dir, 'SLEGO-Project-Minhua')
     else:  # local-jupyter or other environments
         print("Setting up configuration for Local Jupyter environment.")
         if use_local_repo:
