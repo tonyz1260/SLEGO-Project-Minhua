@@ -37,6 +37,7 @@ from rdflib import URIRef
 # Import recommender module
 import recommender as rc
 from validate_func import *
+from function_generator import *
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +78,7 @@ class SLEGOApp:
         self.full_func_mapping_path = 'full_func.json'
         self.full_func_file_path = 'full_func.py'
         self.setup_full_func_mapping()
+        self.output_text.value = '\nHello!\n\nWelcome to SLEGO - A Platform for Collaborative and Modular Data Analytics.\n\nPlease select the modules and functions to get started.\n\n'
 
 
     def initialize_widgets(self):
@@ -137,6 +139,8 @@ class SLEGOApp:
             height=35
         )
 
+        self.func_generator_btn = pn.widgets.Button(name='Generate Function', height=35, button_type='success')
+
         # File management widgets
         self.folder_select = pn.widgets.Select(
             name='Select Folder',
@@ -155,7 +159,7 @@ class SLEGOApp:
         self.file_view = pn.widgets.Button(name='View', height=35)
         self.file_download = pn.widgets.Button(name='Download', height=35)
         self.file_upload = pn.widgets.Button(name='Upload', height=35)
-        self.file_input = pn.widgets.FileInput(name='Upload file', height=35)
+        self.file_input = pn.widgets.FileInput(name='Upload file', height=35, width=230)
         self.file_delete = pn.widgets.Button(name='Delete', height=35)
         self.file_table = self.create_file_table()
 
@@ -166,7 +170,7 @@ class SLEGOApp:
         self.ontology_btn = pn.widgets.Button(name='Show Ontology', height=35)
 
         self.rules_popup = pn.Card(pn.pane.Markdown("## Modal Title\nThis is the content inside the modal."), title="Modal", width=80, height=80, header_background="lightgray")
-        self.rules_button = pn.widgets.Button(name="", icon="info-circle", width=10, button_type="light")
+        self.rules_button = pn.widgets.Button(name="", icon="info-circle", width=10, height=35, button_type="light")
         # self.funccombo = pn.widgets.MultiChoice(name='Functions:', height=150)
         # Placeholder for funccombo
         self.funccombo_pane = pn.Column()
@@ -233,11 +237,9 @@ class SLEGOApp:
 
     def setup_full_func_mapping(self):
         if os.path.exists(self.full_func_mapping_path):
-            print("lololololololololol")
             os.remove(self.full_func_mapping_path)
 
         if os.path.exists(self.full_func_file_path):
-            print("lololololololololol!!!!!!!!!!!!!!!!!!!")
             os.remove(self.full_func_file_path)
 
         # Create a full function mapping file
@@ -315,6 +317,7 @@ class SLEGOApp:
 
         # Added event handler for recommendation button
         self.recommendation_btn.on_click(self.recommendation_btn_clicked)
+        self.func_generator_btn.on_click(self.func_generator_btn_click)
         logger.info("Event handlers set up.")
 
 
@@ -327,7 +330,7 @@ class SLEGOApp:
         widget_btns = pn.Row(self.savepipe_btn, self.pipeline_text, self.ontology_btn)
         widget_updownload = pn.Column(
             pn.Row(self.file_view, self.file_download),
-            pn.Row(self.file_input, self.rules_button),
+            pn.Row(self.file_input, self.rules_button, width=280, height=50),
             pn.Row(self.file_upload, self.file_delete)
         )
         widget_files = pn.Column(
@@ -347,13 +350,14 @@ class SLEGOApp:
         )
 
         # Added recommendation widgets to the layout
-        widget_recom = pn.Row(self.recommendation_btn, self.recomAPI_text)
+        widget_recom = pn.Row(self.recommendation_btn, self.func_generator_btn)
         self.app = pn.Row(
             widget_files,
             pn.Column(widget_funcsel, widget_input, min_width=600, scroll=True),
             pn.Column(
-                widget_recom, 
-                self.progress_text, 
+                self.recomAPI_text,
+                self.progress_text,
+                widget_recom,
                 pn.layout.Divider(height=10, margin=(10)), 
                 self.output_text
             ), 
@@ -365,6 +369,12 @@ class SLEGOApp:
         logger.info(f"funcfilecombo changed: {event.new}")
         selected_modules = event.new
         self.update_func_module(selected_modules)
+
+    def refresh_funcfilecombo(self):
+        # Include all .py files in the functionspace directory
+        self.py_files = [f for f in os.listdir(self.functionspace) if f.endswith('.py')]
+        self.funcfilecombo.options = self.py_files
+        logger.info(f"Refreshed funcfilecombo with {len(self.py_files)} files.")
 
 
     def get_functions_from_module(self, module, module_name):
@@ -447,6 +457,54 @@ class SLEGOApp:
         except Exception as e:
             self.output_text.value += f"\nError during recommendation: {e}"
             logger.error(f"Error during recommendation: {e}")
+
+    def func_generator_btn_click(self, event):
+        logger.info("Function generator button clicked.")
+        query = self.progress_text.value
+        self.output_text.value = 'Generating function from query...'
+        self.output_text.value = '\n\nBelow is the original query:\n\n' + query + '\n\n'
+        generated_functions = generate_function(query)
+
+        filename = datetime.now().strftime("%Y%m%d_%H%M%S_") + 'auto_generated_function.py'
+
+        temp_file_path = self.folder_path + '/temp/' + filename
+        with open(temp_file_path, 'w') as f:
+            f.write(generated_functions)
+
+        flag, message, proposed_correction = function_validation_result(temp_file_path)
+
+        folder = self.folder_path + '/functionspace'
+        file_path = folder + '/' + filename
+
+        self.output_text.value += '\n\n##################Generated & uploaded successfully!##############\n\n'
+        self.output_text.value += f'The following function(s) have been generated and uploaded to SLEGO functionspace with filename: {filename}.\n'
+        self.output_text.value += 'All functions are also validated and corrected if necessary.\n\n'
+        self.output_text.value += message
+
+        # add the generated functions' import statement to the file_path
+        import_statements = extract_import_statements(temp_file_path)
+
+        with open(file_path, 'w') as f:
+            for statement in import_statements:
+                f.write(statement)
+                f.write('\n')
+            f.write('\n')
+            for _, correction in proposed_correction.items():
+                f.write(correction)
+                f.write('\n\n')
+
+        if flag is False:
+            
+            self.output_text.value += "GENERATED FUNCTION WITH MODIFICATION\n\n"
+            
+        else:
+            self.output_text.value += "NO MODIFICATION NEEDED\n\n"
+            
+        self.refresh_file_table()
+        self.refresh_funcfilecombo()
+
+        os.remove(temp_file_path)
+
 
     def compute_btn_clicked(self, event):
         logger.info("Compute button clicked.")
@@ -548,21 +606,27 @@ class SLEGOApp:
                 file_path = folder + '/' + filename
                 self.output_text.value += f'File with the same name already exists. Renaming to {filename}...'
 
+            # add the generated functions' import statement to the file_path
+            import_statements = extract_import_statements(temp_file_path)
+            
+            with open(file_path, 'w') as f:
+                for statement in import_statements:
+                    f.write(statement)
+                    f.write('\n')
+                f.write('\n')
+                for _, correction in proposed_correction.items():
+                    f.write(correction)
+                    f.write('\n\n')
+
             if flag is False:
                 self.output_text.value = "\n\n##################File Upload Success BUT with modification##################\n\n" + message
-                
-                with open(file_path, 'w') as f:
-                    for _, correction in proposed_correction.items():
-                        f.write(correction)
-                        f.write('\n\n')
-                
+                                
             else:
 
-                with open(file_path, 'wb') as f:
-                    f.write(file_content)
                 self.output_text.value += f'\n\n##################{filename} uploaded successfully!##############\n\n' + message
                 
             self.refresh_file_table()
+            self.refresh_funcfilecombo()
 
             os.remove(temp_file_path)
         else:

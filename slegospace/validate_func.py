@@ -70,6 +70,7 @@ def correction_proposal_gpt(name, obj, validation_result: List[ValidationResult]
     You also must not add things like backtick and you must not explicitly declare python as the first line. \
     From here, I will provide you with the function source code and the issue type and message that you need to address. \
     You must aim to address every error message provided. For example, if it requires a default value, provide a dummy default value. \
+    Keep in mind any dummy value must match its data type and should not be values like null or None or NA. \
     You should also aim to address the warning messages provided. They may not be critical but they are good practices to follow. \
     But if addressing warning messages would require a significant change in the function or may modify the function logic, you should skip them."
 
@@ -287,13 +288,13 @@ def check_duplicate_function(name, obj):
 # Create a sorted list of validation models
 validation_rules = [
     ValidationModel(
-        check_syntax_error, 1, "Function does not contain syntax error", "ERROR"
+        check_syntax_error, 1, "Function must not contain syntax error", "ERROR"
     ),
-    ValidationModel(check_docstring, 2, "Function contains docString", "ERROR"),
+    ValidationModel(check_docstring, 2, "Function must contains docString", "ERROR"),
     ValidationModel(
         check_annotations_and_default_values,
         3,
-        "Function parameters contain type annotation and default values",
+        "Function parameters must contain both type annotation and default values",
         "ERROR",
     ),
     ValidationModel(
@@ -331,7 +332,7 @@ def insert_validation_rule_in_place(rules: list[ValidationModel], new_rule: Vali
 validation_rules = insert_validation_rule_in_place(
     validation_rules,
     ValidationModel(
-        check_duplicate_function, 4, "Function name should be unique", "ERROR"
+        check_duplicate_function, 4, "Function name must be unique", "ERROR"
     ),
 )
 
@@ -373,6 +374,8 @@ def validate_func(module):
             if correction_needed:
                 correction = correction_proposal_gpt(name, obj, validate_result)
                 all_proposed_correction[name] = correction
+            else:
+                all_proposed_correction[name] = inspect.getsource(obj)
 
     return final_validate_result, all_proposed_correction
 
@@ -399,7 +402,7 @@ def function_validation_result(file_path):
                 warning_message += str(result)
 
     for name, correction in proposed_correction.items():
-        message += f"Function: {name}\nProposed Correction: \n{correction}\n\n"
+        message += f"Function: {name}\nProposed Correction or Original function: \n{correction}\n\n"
 
     message += "----------------------------------------------------------------------------------------------------------------------\n\n"
     message += "Below are the validation result which may help you to understand the proposed correction and the reasoning.\n\n"
@@ -420,3 +423,34 @@ def function_validation_result(file_path):
 
 #TODO: If the function contains no error, then the proposed correction should be original function, it is currently not added
 #TODO: get original import statement from the file
+def extract_import_statements(file_path):
+    with open(file_path, 'r') as file:
+        # Parse the file content into an AST
+        tree = ast.parse(file.read(), filename=file_path)
+
+        # List to hold the import statements
+        import_statements = []
+
+        # Walk through the nodes of the AST
+        for node in ast.walk(tree):
+            # Check for 'import' statements like 'import module_name'
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    # Check if the import has an alias (e.g., 'import numpy as np')
+                    if alias.asname:
+                        import_statements.append(f"import {alias.name} as {alias.asname}")
+                    else:
+                        import_statements.append(f"import {alias.name}")
+
+            # Check for 'from ... import ...' statements
+            elif isinstance(node, ast.ImportFrom):
+                # Get module name and imported names
+                module = node.module or ''
+                for alias in node.names:
+                    # Handle aliases in 'from ... import ... as ...' statements
+                    if alias.asname:
+                        import_statements.append(f"from {module} import {alias.name} as {alias.asname}")
+                    else:
+                        import_statements.append(f"from {module} import {alias.name}")
+        
+        return import_statements
