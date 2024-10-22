@@ -102,15 +102,16 @@ def warning_api_call(name, obj):
     What that means is based on the actual function context, it may be a function that does webscraping thus does have the output path (to store webscraping result) but not the input path. \
     Or it may be a function that does not have the output path but does have the input path. \
     So your final return response should include the result and must strictly follow this format 'Relevance: [true/false]; Parameter: [input/output/both]' \
-    You must not add any additional text or characters to the response. From here, I will provide you with the docstrings of existing functions that you need to assess."
+    You must not add any additional text or characters to the response. "
+    # From here, I will provide you with the docstrings of existing functions that you need to assess."
 
     # iterate through the existing functions in func.py and provide the docstrings for the prompt
-    import full_func as func
-    for func_name, func_obj in inspect.getmembers(func):
-        if inspect.isfunction(func_obj) and func_obj.__module__ == func.__name__:
-            prompt += (
-                f"\n\nFunction: {func_name}\nDocstring: {inspect.getdoc(func_obj)}\n"
-            )
+    # import full_func as func
+    # for func_name, func_obj in inspect.getmembers(func):
+    #     if inspect.isfunction(func_obj) and func_obj.__module__ == func.__name__:
+    #         prompt += (
+    #             f"\n\nFunction: {func_name}\nDocstring: {inspect.getdoc(func_obj)}\n"
+    #         )
 
     # append the function (source_code) that needs to be assessed
     prompt += "Here is the function that you need to assess"
