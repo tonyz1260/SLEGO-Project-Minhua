@@ -1,5 +1,5 @@
 {
-     "convert_to_long_format": {
+     "Minhua_trial_original.convert_to_long_format": {
           "input_file": "dataspace/World_Development_Indicators.csv",
           "output_file": "dataspace/world_dev_indicator_long.csv",
           "id_vars": [
@@ -11,14 +11,14 @@
           "key_name": "Year",
           "value_name": "Money"
      },
-     "convert_to_integer": {
+     "Minhua_trial_original.convert_to_integer": {
           "input_file": "dataspace/world_dev_indicator_long.csv",
           "output_file": "dataspace/world_dev_indicator_long.csv",
           "columns": [
                "Year"
           ]
      },
-     "filter_by_multiple_val": {
+     "Minhua_trial_original.filter_by_multiple_val": {
           "input_file": "dataspace/world_dev_indicator_long.csv",
           "output_file": "dataspace/gdp_series_all_2019.csv",
           "columns": [
@@ -30,37 +30,37 @@
                2019
           ]
      },
-     "remove_row_with_na_specified_columns": {
+     "Minhua_trial_original.remove_row_with_na_specified_columns": {
           "input_file": "dataspace/gdp_series_all_2019.csv",
           "output_file": "dataspace/gdp_series_all_2019.csv",
           "columns": [
                "Money"
           ]
      },
-     "get_top_n_rows": {
+     "Minhua_trial_original.get_top_n_rows": {
           "input_file": "dataspace/gdp_series_all_2019.csv",
           "output_file": "dataspace/gdp_series_top_5_2019.csv",
           "n": 5
      },
-     "get_bottom_n_rows": {
+     "Minhua_trial_original.get_bottom_n_rows": {
           "input_file": "dataspace/gdp_series_all_2019.csv",
           "output_file": "dataspace/gdp_series_bottom_5_2019.csv",
           "n": 5
      },
-     "concatenate_dataframes": {
+     "Minhua_trial_original.concatenate_dataframes": {
           "input_files": [
                "dataspace/gdp_series_top_5_2019.csv",
                "dataspace/gdp_series_bottom_5_2019.csv"
           ],
           "output_file": "dataspace/gdp_series_2019.csv"
      },
-     "filter_by_val_list": {
+     "Minhua_trial_original.filter_by_val_list": {
           "input_file": "dataspace/world_dev_indicator_long.csv",
           "output_file": "dataspace/gdp_series_all.csv",
           "column": "Country Name",
           "value_path": "dataspace/gdp_series_2019.csv"
      },
-     "filter_by_single_val": {
+     "Minhua_trial_original.filter_by_single_val": {
           "input_file": "dataspace/gdp_series_all.csv",
           "output_file": "dataspace/gdp_series_all.csv",
           "column": "Series Name",
