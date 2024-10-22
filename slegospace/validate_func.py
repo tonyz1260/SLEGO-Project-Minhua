@@ -71,6 +71,7 @@ def correction_proposal_gpt(name, obj, validation_result: List[ValidationResult]
     From here, I will provide you with the function source code and the issue type and message that you need to address. \
     You must aim to address every error message provided. For example, if it requires a default value, provide a dummy default value. \
     Keep in mind any dummy value must match its data type and should not be values like null or None or NA. \
+    You must not change the function name unless an error message specifically asks for it. \
     You should also aim to address the warning messages provided. They may not be critical but they are good practices to follow. \
     But if addressing warning messages would require a significant change in the function or may modify the function logic, you should skip them."
 
